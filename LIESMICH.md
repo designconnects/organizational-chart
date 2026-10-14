@@ -1,32 +1,20 @@
-# Design Summit 2026 – Org Chart (Web-Formular)
+# Design Summit 2026 – Lieferanten-Formular
 
-Lieferanten bekommen einen Link, tragen ihr Design-Team ein, laden am Ende
-eine Datei herunter und schicken sie per E-Mail an
-**designconnects@delta-sport.com**. Wir importieren die Dateien und bekommen
-Organigramm, Excel und PDF.
+Lieferanten bekommen den Link, tragen ihr Design-Team ein, laden am Ende eine
+Datei herunter und schicken sie per E-Mail an
+**designconnects@delta-sport.com**.
 
-Es wird **nichts automatisch verschickt** und es gibt keinen Server. Alle
-Eingaben liegen nur im Browser dessen, der die Seite geöffnet hat.
+**Link für die Lieferanten:** `https://designconnects.github.io/summit-org/`
 
----
+Ausgewertet werden die Dateien im eigenen Projekt **summit-org-admin**
+(Import, Organigramm, Excel, PDF): `https://designconnects.github.io/summit-org-admin/`
 
-## 1. Die zwei Links
-
-| Für wen | Link |
-|---------|------|
-| **Lieferanten** | `https://alexiiio2012.github.io/summit-org/` |
-| **Wir (Admin)** | `https://alexiiio2012.github.io/summit-org/?admin` |
-
-Beide Ansichten kommen aus denselben Dateien; `?admin` schaltet um.
-Im Admin gibt es oben den Knopf **„Lieferanten-Link kopieren"**.
-
-Der Admin-Bereich hat keine PIN mehr. Das ist kein Leck: Er zeigt nur, was im
-eigenen Browser gespeichert ist. Ein Lieferant, der `?admin` anhängt, sieht
-also höchstens seine eigenen Einträge – nie die anderer Firmen.
+Es wird **nichts automatisch verschickt** und es gibt keinen Server. Die
+Eingaben liegen nur im Browser des Lieferanten.
 
 ---
 
-## 2. Ablauf für die Lieferanten
+## 1. Ablauf für die Lieferanten
 
 1. Link öffnen, **Firmennamen** eingeben, „Start".
 2. **Jede Person** erfassen und „Person hinzufügen" drücken. Nur der Name ist
@@ -64,55 +52,17 @@ Was dabei hilft:
 Jede Auswahlzeile hat ein Freitextfeld für eigene Einträge.
 
 Die Datei heißt `design-summit-2026_<firma>.json`. Sie enthält nur die Werte,
-die tatsächlich ausgewählt sind – Tippfehler, die der Lieferant wieder
-abgewählt hat, landen nicht in unseren Filterlisten.
+die tatsächlich ausgewählt sind.
 
 ---
 
-## 3. Eingegangene Dateien übernehmen (Admin)
-
-*Daten & Einstellungen → JSON-Dateien importieren*, dann **alle Dateien auf
-einmal** auswählen.
-
-- Eine Meldung fasst zusammen, wie viele Dateien und Personen übernommen
-  wurden, und nennt Dateien, die nicht lesbar waren.
-- Schickt ein Lieferant **zweimal**, fragt die App: *Zusammenführen* ergänzt
-  nur fehlende Personen (erkannt über Name + E-Mail), *Abbrechen* übernimmt
-  diese Datei nicht.
-- Vor dem Import wird **ein** Wiederherstellungspunkt für den ganzen Stapel
-  angelegt.
-
-Danach wie gewohnt: Organigramm, Filter, **Excel-Arbeitsmappe**,
-**Organigramm als PDF**.
-
----
-
-## 4. Speicherung im Admin
-
-Der Admin-Stand liegt im Browser, mit dem du `?admin` öffnest – auf einem
-anderen Rechner oder in einem anderen Browser ist er nicht da.
-
-- **Regelmäßig *JSON-Sicherung → Sicherung speichern*.** Wer die Browserdaten
-  löscht, verliert sonst den Stand. Die Lieferanten-Dateien aus dem Postfach
-  sind ein zweites Backup: Sie lassen sich jederzeit neu importieren.
-- Wiederherstellungspunkte: bei jedem Öffnen und vor jedem Import, die fünf
-  neuesten bleiben.
-- Rote Hinweise: **„Kein Speicher"** = privater Modus, **„Speicher voll"** =
-  letzte Eingaben nicht gespeichert, sofort sichern.
-
-Lieferanten-Formular und Admin nutzen getrennte Speicher. Wenn du das Formular
-im eigenen Browser ausprobierst, landet das nicht in deinem Admin-Bestand.
-
----
-
-## 5. Dateien im Repo
+## 2. Dateien im Repo
 
 | Datei / Ordner | Zweck |
 |----------------|-------|
-| `index.html`, `app.css`, `app.js` | Die App (beide Ansichten) |
+| `index.html`, `app.css`, `app.js` | Das Formular |
 | `sw.js` | Baut den Offline-Speicher der alten iPad-Version ab – siehe unten |
 | `fonts/` | Mulish, lokal (SIL Open Font License 1.1) |
-| `vendor/` | xlsx, html2canvas, jsPDF – lädt nur der Admin |
 | `icons/` | Browser-Symbol |
 | `_lokal_testen.ps1` | Testserver für den Windows-Rechner, nicht Teil der App |
 | `.nojekyll` | Sorgt dafür, dass GitHub Pages die Ordner unverändert ausliefert |
@@ -123,34 +73,17 @@ Es gibt keine Verbindung nach außen: kein CDN, keine Google-Fonts, kein Trackin
 eingerichtet und die Seite aus einem eigenen Speicher ausgeliefert. Wer sie
 einmal geöffnet hat, würde ohne `sw.js` dauerhaft den alten Stand sehen. Die
 jetzige `sw.js` räumt das beim nächsten Aufruf ab und lädt die Seite neu.
-**Nicht löschen.** Nach Änderungen an der App ist kein Hochzählen von
-Versionen mehr nötig – GitHub Pages liefert direkt aus (ggf. einmal mit
-Strg+F5 neu laden).
+**Nicht löschen.**
+
+Nach Änderungen an der App ist kein Hochzählen von Versionen mehr nötig –
+GitHub Pages liefert direkt aus (ggf. einmal mit Strg+F5 neu laden).
 
 ---
 
-## 6. Vor dem Versand testen
+## 3. Vor dem Versand testen
 
 Rechtsklick auf `_lokal_testen.ps1` → „Mit PowerShell ausführen". Der Browser
-öffnet `http://localhost:8099/` (Lieferanten-Ansicht); `http://localhost:8099/?admin`
-ist die Admin-Ansicht.
+öffnet `http://localhost:8099/`.
 
----
-
-## 7. Organigramm-Logik
-
-**Wurzel:** Wer **Team responsible** angehakt hat, steht oben. Sind mehrere
-Personen so markiert, wird die erste zur Wurzel, die anderen behalten ihre
-Kennzeichnung. Ist niemand markiert, bildet ein Firmenknoten die Wurzel.
-
-**Gruppierung:** Maßgeblich ist die **erste** Kategorie einer Person. Die Zahl
-im schwarzen Kreis am Label ist die Personenzahl der Gruppe.
-
-- Kategorien mit **mehreren** Personen: eigene Zeile, Label links, Personen
-  nebeneinander, Spalten bündig.
-- Kategorien mit **genau einer** Person: gemeinsam in der letzten Zeile.
-- Ohne Kategorie: Sammelgruppe **„Sonderprojekte"** (*Special projects*),
-  änderbar in `app.js` beim Schlüssel `chart.noCat`.
-
-Filter blenden Nichttreffer ab, entfernen sie aber nicht. Zoomen über
-**+ / − / Einpassen**; der PDF-Export ist immer vollständig und ungefiltert.
+Eingaben beim Testen liegen nur in deinem Browser und berühren den Bestand im
+Admin-Projekt nicht (eigener Speicher-Schlüssel).
