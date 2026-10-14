@@ -1,68 +1,30 @@
-/* Service Worker – macht die App nach dem ersten Laden komplett offline nutzbar.
-   Bei Aenderungen an einer der Dateien unten die CACHE-Version hochzaehlen. */
+/* Abbau des Service Workers.
+
+   Die fruehere iPad-Version hat einen Service Worker installiert, der die
+   Seite aus seinem eigenen Cache ausliefert – auch dann, wenn auf GitHub
+   laengst eine neue Version liegt. Wer die alte Version einmal geoeffnet hat,
+   wuerde ohne dieses Skript dauerhaft den alten Stand sehen.
+
+   Der Browser prueft bei jedem Seitenaufruf, ob sich sw.js geaendert hat.
+   Diese Fassung ersetzt dann den alten Worker, loescht seine Caches, meldet
+   sich selbst ab und laedt offene Tabs neu. Danach kommt alles wieder direkt
+   von GitHub Pages.
+
+   Datei bitte NICHT loeschen, solange noch jemand eine alte Version offen
+   haben koennte. Sie richtet keinen Schaden an und wird nicht mehr neu
+   registriert (app.js tut das nicht mehr). */
 "use strict";
 
-const CACHE = "summit-org-v5";
-
-const ASSETS = [
-  "./",
-  "./index.html",
-  "./app.css",
-  "./app.js",
-  "./manifest.webmanifest",
-  "./fonts/mulish.css",
-  "./fonts/mulish-latin.woff2",
-  "./fonts/mulish-latin-ext.woff2",
-  "./vendor/xlsx.full.min.js",
-  "./vendor/html2canvas.min.js",
-  "./vendor/jspdf.umd.min.js",
-  "./icons/icon-180.png",
-  "./icons/icon-192.png",
-  "./icons/icon-512.png",
-  "./icons/icon-512-maskable.png"
-];
-
-self.addEventListener("install", event => {
-  event.waitUntil(
-    caches.open(CACHE)
-      // einzeln adden, damit eine fehlende Datei nicht die ganze Installation kippt
-      .then(c => Promise.all(ASSETS.map(u => c.add(new Request(u, { cache: "reload" })).catch(() => null))))
-      .then(() => self.skipWaiting())
-  );
-});
+self.addEventListener("install", () => self.skipWaiting());
 
 self.addEventListener("activate", event => {
-  event.waitUntil(
-    caches.keys()
-      .then(keys => Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k))))
-      .then(() => self.clients.claim())
-  );
+  event.waitUntil((async () => {
+    const keys = await caches.keys();
+    await Promise.all(keys.map(k => caches.delete(k)));
+    await self.registration.unregister();
+    const tabs = await self.clients.matchAll({ type: "window" });
+    tabs.forEach(tab => tab.navigate(tab.url));
+  })());
 });
 
-self.addEventListener("fetch", event => {
-  const req = event.request;
-  if (req.method !== "GET") return;
-
-  // Seitenaufruf bewusst zuerst aus dem Cache: die App startet dadurch sofort und
-  // haengt nicht an einem WLAN, das Verbindungen annimmt aber nicht antwortet
-  // (Hotel-/Messe-Portale). Aktualisiert wird ueber die CACHE-Version oben.
-  if (req.mode === "navigate") {
-    event.respondWith(
-      caches.match("./index.html").then(hit => hit || fetch(req).catch(() => Response.error()))
-    );
-    return;
-  }
-
-  event.respondWith(
-    caches.match(req, { ignoreSearch: true }).then(hit => {
-      if (hit) return hit;
-      return fetch(req).then(res => {
-        if (res && res.ok && new URL(req.url).origin === self.location.origin) {
-          const copy = res.clone();
-          caches.open(CACHE).then(c => c.put(req, copy));
-        }
-        return res;
-      }).catch(() => hit || Response.error());
-    })
-  );
-});
+/* Kein fetch-Handler: alle Anfragen gehen direkt ans Netz. */

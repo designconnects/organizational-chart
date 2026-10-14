@@ -197,15 +197,69 @@ input::placeholder{color:#b3b3ba;font-weight:600}
 .k-hero h2{font-size:34px;font-weight:800;letter-spacing:-.02em;margin-top:12px;line-height:1.15}
 .k-hero p{font-size:17px;color:var(--muted);margin:12px 0 0}
 .k-hero .pickwrap{margin-top:30px;text-align:left}
-.sugg{margin-top:12px;display:flex;flex-direction:column;gap:10px}
-.sugg button{
-  border:2px solid var(--border-strong);background:#fff;border-radius:14px;
-  padding:16px 18px;font-size:17px;font-weight:800;color:var(--ink);
-  text-align:left;cursor:pointer;min-height:var(--tap);
+.k-hero .pickwrap .flabel{display:block;font-size:15px;font-weight:800;margin-bottom:9px}
+
+/* Startseite: die drei Schritte in Kurzform */
+.how{
+  list-style:none;margin:28px auto 0;padding:0;display:flex;gap:12px;
+  justify-content:center;flex-wrap:wrap;text-align:left;
 }
-.sugg button:active{transform:scale(.99)}
-.sugg button.new{border-style:dashed;border-color:var(--blue);color:var(--blue)}
-.sugg button .s2{display:block;font-size:13.5px;font-weight:700;color:var(--muted);margin-top:3px}
+.how li{
+  display:flex;align-items:center;gap:10px;background:#fff;border:1px solid var(--border);
+  border-radius:14px;padding:12px 16px;font-size:15px;font-weight:700;color:var(--ink);
+  flex:1 1 200px;max-width:240px;
+}
+.num{
+  width:28px;height:28px;border-radius:999px;background:var(--ink);color:#fff;
+  font-size:14px;font-weight:800;display:grid;place-items:center;flex:0 0 auto;
+}
+.pickrow{display:flex;gap:10px}
+.pickrow input{flex:1 1 auto;min-width:0}
+.pickrow .btn{flex:0 0 auto}
+
+/* Fortschrittsleiste unter dem Kopf: Schritt 1 -> Schritt 2 + Download */
+.k-steps{
+  flex:0 0 auto;display:flex;align-items:center;gap:14px;flex-wrap:wrap;
+  padding:12px calc(var(--safe-r) + 22px) 12px calc(var(--safe-l) + 22px);
+  background:#fff;border-bottom:1px solid var(--border);
+}
+.k-step{display:flex;align-items:center;gap:10px;min-width:0}
+.k-step .st{display:flex;flex-direction:column;min-width:0;line-height:1.25}
+.k-step .st b{font-size:15px;font-weight:800}
+.k-step .st span{font-size:13px;color:var(--muted);font-weight:700}
+.k-step .num{background:#c9c9cf}
+.k-step.ok .num{background:var(--green)}
+.k-step.ok .st span{color:var(--green)}
+.k-step.warn .num{background:var(--amber-ink)}
+.k-step.warn .st span{color:var(--amber-ink)}
+#kStep2 .num{background:var(--ink)}
+#kStep2.ok .num{background:var(--green)}
+#kStep2.warn .num{background:var(--amber-ink)}
+.k-arrow{font-size:20px;color:#b3b3ba;font-weight:800}
+.k-steps #kSend{margin-left:auto}
+@media (max-width:640px){
+  .k-arrow{display:none}
+  .k-steps{gap:8px 10px;padding-top:10px;padding-bottom:10px}
+  .k-steps #kSend{width:100%;margin-left:0;min-height:50px;font-size:17px}
+  .how li{max-width:none}
+  /* Platz fuer das Formular: Untertitel im Kopf und der Hinweis in der
+     unteren Leiste sind auf dem Handy entbehrlich ("Nur der Name ist Pflicht"
+     steht ohnehin im Formular). */
+  .k-top .sub{display:none}
+  .k-top{padding-top:calc(var(--safe-t) + 10px);padding-bottom:10px}
+  .k-bar .hint{display:none}
+  .k-hero h2{font-size:27px}
+}
+
+/* Dialog nach dem Download */
+.send-steps{text-align:left;margin:18px auto 0;padding-left:22px;max-width:380px;font-size:16px;line-height:1.6;color:var(--ink);font-weight:600}
+.send-addr{
+  margin-top:18px;display:flex;align-items:center;justify-content:center;gap:12px;flex-wrap:wrap;
+  background:var(--blue-tint);border:2px solid #c4cbec;border-radius:14px;padding:12px 14px;
+}
+.send-addr b{font-size:17px;font-weight:800;color:var(--blue);word-break:break-all;user-select:all}
+#sendFile{font-weight:700;color:var(--ink);word-break:break-all}
+a.btn{text-decoration:none}
 
 .company-chip{
   display:inline-flex;align-items:center;gap:10px;background:var(--blue-tint);

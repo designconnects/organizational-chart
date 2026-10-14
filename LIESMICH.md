@@ -1,205 +1,156 @@
-# Design Summit 2026 – Org Chart (iPad-App)
+# Design Summit 2026 – Org Chart (Web-Formular)
 
-Selbstbedienungs-Erfassung für den Summit: iPad weitergeben, die Person trägt sich
-selbst ein, alles bleibt auf dem Gerät. Auswertung, Organigramm und Export liegen
-hinter einer PIN.
+Lieferanten bekommen einen Link, tragen ihr Design-Team ein, laden am Ende
+eine Datei herunter und schicken sie per E-Mail an
+**designconnects@delta-sport.com**. Wir importieren die Dateien und bekommen
+Organigramm, Excel und PDF.
 
----
-
-## 1. Was in diesem Ordner liegt
-
-| Datei / Ordner        | Zweck                                                        |
-|-----------------------|--------------------------------------------------------------|
-| `index.html`          | Die App                                                      |
-| `app.css`, `app.js`   | Layout und Logik                                             |
-| `manifest.webmanifest`| Macht die App auf dem Homescreen zur eigenständigen App       |
-| `sw.js`               | Service Worker – sorgt für den Offline-Betrieb                |
-| `fonts/`              | Mulish, lokale Kopie (SIL Open Font License 1.1)             |
-| `vendor/`             | xlsx, html2canvas, jsPDF – lokal, kein CDN                   |
-| `icons/`              | Homescreen-Icons                                             |
-| `_lokal_testen.ps1`   | Kleiner Testserver für den Windows-Rechner (nicht Teil der App) |
-
-Es gibt **keine** Verbindung nach außen. Kein CDN, keine Google-Fonts, kein Tracking.
+Es wird **nichts automatisch verschickt** und es gibt keinen Server. Alle
+Eingaben liegen nur im Browser dessen, der die Seite geöffnet hat.
 
 ---
 
-## 2. Auf das iPad bringen
+## 1. Die zwei Links
 
-Der Ordner muss **einmal über HTTPS** erreichbar sein. Das ist keine Schikane,
-sondern Bedingung von iOS: nur in einem „secure context“ darf sich der Service
-Worker installieren, und nur dann läuft die App danach wirklich offline.
+| Für wen | Link |
+|---------|------|
+| **Lieferanten** | `https://alexiiio2012.github.io/summit-org/` |
+| **Wir (Admin)** | `https://alexiiio2012.github.io/summit-org/?admin` |
 
-**So geht es:**
+Beide Ansichten kommen aus denselben Dateien; `?admin` schaltet um.
+Im Admin gibt es oben den Knopf **„Lieferanten-Link kopieren"**.
 
-1. Den kompletten Ordner auf einen statischen HTTPS-Webspace legen
-   (interner Webserver, Azure Static Web Apps, Netlify Drop, GitHub Pages – was
-   die IT freigibt). Der Ordnerinhalt wird 1:1 hochgeladen, nichts umbenennen.
-2. Auf dem iPad in **Safari** die URL öffnen.
-3. Teilen-Symbol → **„Zum Home-Bildschirm“** → Name z. B. „Summit Org“.
-4. Die App vom Homescreen einmal starten, solange noch Internet da ist. Damit
-   legt der Service Worker alle Dateien lokal ab.
-5. Ab jetzt läuft alles offline – Flugmodus zum Prüfen einschalten und die App
-   neu starten. Unter *Admin → Daten & Einstellungen → Offline-Status* muss
-   „Bereit“ stehen.
-
-**Was nicht funktioniert:**
-
-- Die HTML-Datei direkt aus der Dateien-App öffnen (`file://`): iOS speichert
-  dort nicht zuverlässig, Einträge können verloren gehen.
-- Ein interner Server über `http://` (ohne S): die App läuft, aber der Service
-  Worker installiert sich nicht, also kein garantierter Offline-Betrieb.
-
-**Vorab auf dem Windows-Rechner testen:** Rechtsklick auf `_lokal_testen.ps1`
-→ „Mit PowerShell ausführen“, dann `http://localhost:8099/` im Browser öffnen.
-`localhost` gilt für den Browser als sicher, daher lässt sich damit auch der
-Offline-Betrieb prüfen.
+Der Admin-Bereich hat keine PIN mehr. Das ist kein Leck: Er zeigt nur, was im
+eigenen Browser gespeichert ist. Ein Lieferant, der `?admin` anhängt, sieht
+also höchstens seine eigenen Einträge – nie die anderer Firmen.
 
 ---
 
-## 3. Vor dem Summit einrichten
+## 2. Ablauf für die Lieferanten
 
-1. App öffnen, oben rechts auf das **Schloss-Symbol**, PIN eingeben.
-   **Die Start-PIN ist `2026`.**
-2. Unter *Daten & Einstellungen → Admin-PIN* eine eigene PIN setzen.
-3. Bei *Firmenauswahl im Kiosk-Modus* entscheiden:
-   - **Frei** (Vorgabe): Jede Person tippt ihre Firma selbst ein. Es wird nie
-     eine Firmenliste angezeigt – nur Treffer zur Eingabe. Nach „Fertig“ ist das
-     Feld wieder leer, die nächste Person sieht nichts vom Vorgänger.
-   - **Fest**: Der Kiosk bleibt auf dem oben ausgewählten Lieferanten. Sinnvoll,
-     wenn nur eine Firma erfasst wird.
-4. Optional bestehende Daten laden: *Import → JSON* oder *Excel / CSV*.
-   Die vorhandenen Dateien aus `L_Organigramm_TEST` passen dafür.
+1. Link öffnen, **Firmennamen** eingeben, „Start".
+2. **Jede Person** erfassen und „Person hinzufügen" drücken. Nur der Name ist
+   Pflicht.
+3. Oben **„Datei herunterladen"**. Danach erscheint ein Fenster mit der
+   Adresse, einem Knopf „E-Mail öffnen" (Empfänger und Betreff sind
+   vorausgefüllt) und dem Hinweis, die Datei anzuhängen.
 
-   Steht ein Lieferant aus der Datei schon auf dem iPad, fragt die App nach:
-   **Zusammenführen** ergänzt nur die Personen, die noch fehlen (erkannt über
-   Name + E-Mail), **Abbrechen** importiert nichts. Dieselbe Datei zweimal
-   einzulesen verdoppelt die Daten also nicht mehr.
-5. **iPad weitergeben** antippen. Damit ist der Admin-Bereich wieder gesperrt.
+Was dabei hilft:
 
----
+- **Die Leiste oben** zeigt jederzeit, wie viele Personen erfasst sind und ob
+  die Datei schon heruntergeladen wurde. Wird danach noch etwas geändert,
+  springt sie auf „Seit dem letzten Download geändert".
+- **Vergessene Eingaben:** Steht beim Download noch eine Person im Formular,
+  die nicht hinzugefügt wurde, fragt die App nach.
+- **Neu laden oder später weitermachen** geht: Firma und Personen bleiben im
+  Browser gespeichert.
+- „Ändern" neben dem Firmennamen **benennt um** (z. B. bei Tippfehler), legt
+  keine zweite Firma an.
+- Sprache EN/DE oben rechts, Vorgabe ist Englisch.
 
-## 4. Ablauf am Summit
-
-Die Person bekommt das iPad und sieht nur: Firma eingeben → Formular → *Eintragen*.
-Danach kommt eine Bestätigung mit „Weitere Person“ oder „Fertig“.
-
-- Nur der **Name** ist Pflicht. E-Mail wird auf Plausibilität geprüft.
-- Gleiche Namen werden nachgefragt, nicht stillschweigend doppelt angelegt.
-- Eigene Einträge kann die Person korrigieren, solange sie das iPad hat.
-  Fremde Einträge sind schreibgeschützt.
-- Kategorien, Sprachen und Software lassen sich über das Feld unter den Chips
-  jederzeit ergänzen; neue Einträge stehen danach allen zur Verfügung.
-- Oben rechts kann jede Person zwischen **EN** und **DE** umschalten.
-  Vorgabe ist Englisch.
-
-**Die Felder im Formular:**
+**Die Felder:**
 
 | Feld | Pflicht | Inhalt |
 |------|---------|--------|
 | Name | ja | — |
 | E-Mail, Telefon | nein | E-Mail wird auf Plausibilität geprüft |
-| Core Categories / product groups | nein | Warengruppen. Die **erste** Angabe bestimmt die Gruppe im Organigramm |
+| Core Categories / product groups | nein | Die **erste** Angabe bestimmt die Gruppe im Organigramm |
 | Languages | nein | Vorauswahl German, English, Mandarin |
 | 3D Software | nein | Vorauswahl SolidWorks, Rhino 3D, KeyShot |
 | 2D Software | nein | Vorauswahl Adobe Photoshop, Illustrator, InDesign |
 | AI Software | nein | Vorauswahl Vizcom, Claude, ChatGPT, Google Gemini |
 | Team responsible | nein | Wer angehakt ist, steht im Organigramm oben |
 
-Jede Software-Zeile hat ein Freitextfeld: was dort eingetragen wird, landet im
-Pool und steht danach allen Personen und den Filtern zur Verfügung.
+Jede Auswahlzeile hat ein Freitextfeld für eigene Einträge.
 
-> Intern heißt das 3D-Feld weiterhin `cad` (früher „CAD software"). Das ist
-> Absicht – nur die Beschriftung wurde geändert, damit ältere JSON-Sicherungen
-> und Excel-Dateien weiter passen. Der Excel-Import akzeptiert beide
-> Spaltenüberschriften, ebenso „Teamleiter" neben „Team responsible".
+Die Datei heißt `design-summit-2026_<firma>.json`. Sie enthält nur die Werte,
+die tatsächlich ausgewählt sind – Tippfehler, die der Lieferant wieder
+abgewählt hat, landen nicht in unseren Filterlisten.
 
 ---
 
-## 5. Speicherung
+## 3. Eingegangene Dateien übernehmen (Admin)
 
-Jede Änderung wird sofort auf dem iPad gespeichert – kein Speichern-Knopf, und
-ein versehentlicher Neustart kostet keine Daten. Zusätzlich legt die App bei
-jedem Start und vor jedem Import einen **Wiederherstellungspunkt** an
-(die fünf neuesten, unter *Daten & Einstellungen*).
+*Daten & Einstellungen → JSON-Dateien importieren*, dann **alle Dateien auf
+einmal** auswählen.
 
-Trotzdem: Am Ende jedes Summit-Tages einmal *JSON-Sicherung → Sicherung speichern*
-und die Datei vom iPad wegschieben. Der Speicher hängt an Safari; wenn jemand die
-Website-Daten löscht oder die App vom Homescreen entfernt, ist der Stand weg.
+- Eine Meldung fasst zusammen, wie viele Dateien und Personen übernommen
+  wurden, und nennt Dateien, die nicht lesbar waren.
+- Schickt ein Lieferant **zweimal**, fragt die App: *Zusammenführen* ergänzt
+  nur fehlende Personen (erkannt über Name + E-Mail), *Abbrechen* übernimmt
+  diese Datei nicht.
+- Vor dem Import wird **ein** Wiederherstellungspunkt für den ganzen Stapel
+  angelegt.
 
-**Rote Hinweise im Admin-Bereich beachten.** Es gibt zwei:
-
-- **„Kein Speicher“** – Safari läuft im privaten Modus. Die Einträge bestehen
-  nur bis zum Schließen des Tabs.
-- **„Speicher voll“** – der Platz auf dem iPad ist erschöpft und die letzten
-  Eingaben wurden **nicht** gespeichert. Sofort eine JSON-Sicherung exportieren,
-  danach alte Wiederherstellungspunkte oder nicht mehr benötigte Lieferanten
-  löschen.
-
-In beiden Fällen kommt zusätzlich eine Meldung unten am Bildschirm. Ein
-Speicherfehler bleibt nie stillschweigend.
+Danach wie gewohnt: Organigramm, Filter, **Excel-Arbeitsmappe**,
+**Organigramm als PDF**.
 
 ---
 
-## 6. Daten herausholen
+## 4. Speicherung im Admin
 
-Alles unter *Admin → Daten & Einstellungen*:
+Der Admin-Stand liegt im Browser, mit dem du `?admin` öffnest – auf einem
+anderen Rechner oder in einem anderen Browser ist er nicht da.
 
-- **Excel-Arbeitsmappe** – ein Blatt mit allen Lieferanten plus je ein Blatt pro
-  Lieferant. Spalten: Lieferant, Name, E-Mail, Telefon, Team responsible,
-  Kategorien, 3D Software, 2D Software, AI Software, Sprachen. Diese Datei lässt
-  sich unverändert wieder importieren.
-- **Organigramm als PDF** – der aktuelle Lieferant, komplett auf einer Seite.
-- **JSON-Sicherung** – vollständiger Stand, für Backup und Weiterbearbeitung.
+- **Regelmäßig *JSON-Sicherung → Sicherung speichern*.** Wer die Browserdaten
+  löscht, verliert sonst den Stand. Die Lieferanten-Dateien aus dem Postfach
+  sind ein zweites Backup: Sie lassen sich jederzeit neu importieren.
+- Wiederherstellungspunkte: bei jedem Öffnen und vor jedem Import, die fünf
+  neuesten bleiben.
+- Rote Hinweise: **„Kein Speicher"** = privater Modus, **„Speicher voll"** =
+  letzte Eingaben nicht gespeichert, sofort sichern.
 
-Auf dem iPad öffnet sich dabei das iOS-Teilen-Menü (AirDrop, Mail, „In Dateien
-speichern“, Teams). Am Rechner wird die Datei normal heruntergeladen.
-
----
-
-## 7. Wenn Dateien geändert werden
-
-Der Service Worker liefert die Dateien aus seinem Cache aus. Nach einer Änderung
-an `index.html`, `app.css` oder `app.js` deshalb in `sw.js` die Zeile
-
-```js
-const CACHE = "summit-org-v5";
-```
-
-hochzählen (`v6`, `v7`, …) und die App auf dem iPad zweimal starten. Ohne das
-bleibt die alte Version aktiv.
+Lieferanten-Formular und Admin nutzen getrennte Speicher. Wenn du das Formular
+im eigenen Browser ausprobierst, landet das nicht in deinem Admin-Bestand.
 
 ---
 
-## 8. Organigramm-Logik
+## 5. Dateien im Repo
+
+| Datei / Ordner | Zweck |
+|----------------|-------|
+| `index.html`, `app.css`, `app.js` | Die App (beide Ansichten) |
+| `sw.js` | Baut den Offline-Speicher der alten iPad-Version ab – siehe unten |
+| `fonts/` | Mulish, lokal (SIL Open Font License 1.1) |
+| `vendor/` | xlsx, html2canvas, jsPDF – lädt nur der Admin |
+| `icons/` | Browser-Symbol |
+| `_lokal_testen.ps1` | Testserver für den Windows-Rechner, nicht Teil der App |
+| `.nojekyll` | Sorgt dafür, dass GitHub Pages die Ordner unverändert ausliefert |
+
+Es gibt keine Verbindung nach außen: kein CDN, keine Google-Fonts, kein Tracking.
+
+**Zu `sw.js`:** Die frühere iPad-Version hat sich als Offline-App
+eingerichtet und die Seite aus einem eigenen Speicher ausgeliefert. Wer sie
+einmal geöffnet hat, würde ohne `sw.js` dauerhaft den alten Stand sehen. Die
+jetzige `sw.js` räumt das beim nächsten Aufruf ab und lädt die Seite neu.
+**Nicht löschen.** Nach Änderungen an der App ist kein Hochzählen von
+Versionen mehr nötig – GitHub Pages liefert direkt aus (ggf. einmal mit
+Strg+F5 neu laden).
+
+---
+
+## 6. Vor dem Versand testen
+
+Rechtsklick auf `_lokal_testen.ps1` → „Mit PowerShell ausführen". Der Browser
+öffnet `http://localhost:8099/` (Lieferanten-Ansicht); `http://localhost:8099/?admin`
+ist die Admin-Ansicht.
+
+---
+
+## 7. Organigramm-Logik
 
 **Wurzel:** Wer **Team responsible** angehakt hat, steht oben. Sind mehrere
 Personen so markiert, wird die erste zur Wurzel, die anderen behalten ihre
-Kennzeichnung.
-Ist niemand markiert, bildet ein Firmenknoten die Wurzel, damit das Diagramm
-zusammenhängend bleibt.
+Kennzeichnung. Ist niemand markiert, bildet ein Firmenknoten die Wurzel.
 
-**Gruppierung:** Darunter wird nach Kategorien gruppiert. Maßgeblich ist die
-**erste** Kategorie einer Person – wer „DIY & Hardware · Toys" angegeben hat,
-erscheint unter DIY & HARDWARE. Die Zahl im schwarzen Kreis am Label ist die
-Personenzahl der Gruppe.
+**Gruppierung:** Maßgeblich ist die **erste** Kategorie einer Person. Die Zahl
+im schwarzen Kreis am Label ist die Personenzahl der Gruppe.
 
-- Kategorien mit **mehreren** Personen bekommen eine eigene Zeile: Label links,
-  alle Personen nebeneinander. Die Labels sind gleich breit, damit die
-  Personen-Spalten über alle Zeilen bündig untereinander stehen.
-- Kategorien mit **genau einer** Person stehen gemeinsam in der letzten Zeile
-  nebeneinander, jede mit ihrem Label darüber. Das hält das Diagramm kompakt.
-- Zeilen mit mehreren Personen kommen zuerst, nach Gruppengröße absteigend.
+- Kategorien mit **mehreren** Personen: eigene Zeile, Label links, Personen
+  nebeneinander, Spalten bündig.
+- Kategorien mit **genau einer** Person: gemeinsam in der letzten Zeile.
+- Ohne Kategorie: Sammelgruppe **„Sonderprojekte"** (*Special projects*),
+  änderbar in `app.js` beim Schlüssel `chart.noCat`.
 
-**Ohne Kategorie:** Personen, die keine Kategorie angegeben haben, landen in
-einer Sammelgruppe mit dem Label **„Sonderprojekte"** (englisch *Special
-projects*). Das ist eine reine Beschriftung – sie sagt nur „keine Kategorie
-angegeben". Wenn dir eine andere Bezeichnung lieber ist, lässt sich das in
-`app.js` beim Schlüssel `chart.noCat` ändern.
-
-**Sonstiges:**
-
-- Filter blenden Nichttreffer ab, entfernen sie aber nicht – die Struktur und
-  die Gruppengrößen bleiben lesbar.
-- Zoomen über **+ / − / Einpassen** oder mit zwei Fingern direkt im Diagramm.
-  Bei vielen Kategorien wird das Diagramm breit; „Einpassen" holt es auf die
-  Bildschirmbreite, der PDF-Export bleibt davon unberührt und immer vollständig.
+Filter blenden Nichttreffer ab, entfernen sie aber nicht. Zoomen über
+**+ / − / Einpassen**; der PDF-Export ist immer vollständig und ungefiltert.

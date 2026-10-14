@@ -1,13 +1,25 @@
 /* ============================================================
-   Design Summit 2026 – Org Chart (iPad-App)
-   Basiert auf Maske_Organigramm.html, erweitert um:
-   Autosave, Kiosk-Modus mit PIN-Sperre, DE/EN, Offline-Assets,
-   Touch-Bedienung, Wiederherstellungspunkte.
+   Design Summit 2026 – Org Chart (Web-Formular)
+   Zwei Ansichten aus denselben Dateien:
+   - Lieferanten (Standard-Link): Firma eingeben, Team erfassen,
+     JSON-Datei herunterladen und per Mail an uns schicken.
+   - Admin (?admin): eingegangene Dateien importieren, Organigramm,
+     Excel/PDF-Export, Sicherungen.
+   Es wird nichts automatisch verschickt; alle Daten liegen im Browser
+   dessen, der die Seite oeffnet.
+   Die Bezeichner beginnend mit "k"/kiosk stammen aus der frueheren
+   iPad-Version und meinen heute die Lieferanten-Ansicht.
    ============================================================ */
 "use strict";
 
-const APP_VERSION = "1.1";
-const LS_KEY   = "summitOrg.state.v1";
+const APP_VERSION = "2.0";
+const MODE = new URLSearchParams(location.search).has("admin") ? "admin" : "supplier";
+const SEND_TO = "designconnects@delta-sport.com";
+
+/* Getrennte Speicher je Ansicht: Wer das Lieferanten-Formular im eigenen
+   Browser ausprobiert, soll damit nicht den Admin-Bestand vermischen.
+   Der Admin-Schluessel ist der bisherige – vorhandene Daten bleiben erhalten. */
+const LS_KEY   = MODE === "admin" ? "summitOrg.state.v1" : "summitOrg.supplier.v1";
 const LS_SNAP  = "summitOrg.snapshots.v1";
 const MAX_SNAP = 5;
 
@@ -38,30 +50,59 @@ const STR = {
   "btn.restore":     ["Restore", "Wiederherstellen"],
 
   "k.kick":          ["Design Summit 2026", "Design Summit 2026"],
-  "k.welcome":       ["Welcome — please add yourself to the chart", "Willkommen — bitte tragen Sie sich ein"],
-  "k.pickCompany":   ["Start by typing your company name.", "Bitte zuerst den Firmennamen eingeben."],
-  "k.searchCompany": ["Your company…", "Ihre Firma…"],
-  "k.noMatch":       ["No company found yet — keep typing.", "Noch keine Firma gefunden — weiter tippen."],
-  "k.createNew":     ["Add as new company", "Als neue Firma anlegen"],
-  "k.nMembers":      ["{n} people entered", "{n} Personen erfasst"],
-  "k.formTitle":     ["Your details", "Ihre Angaben"],
+  "k.welcome":       ["Tell us who is on your design team", "Wer ist in Ihrem Design-Team?"],
+  "k.intro":         ["It takes about five minutes. Nothing is sent automatically — at the end you download one file and email it to us.", "Das dauert etwa fünf Minuten. Es wird nichts automatisch verschickt — am Ende laden Sie eine Datei herunter und schicken sie uns per E-Mail."],
+  "k.how1":          ["Enter your company name", "Firmennamen eingeben"],
+  "k.how2":          ["Add each person in your team", "Jede Person im Team erfassen"],
+  "k.how3":          ["Download the file and email it to us", "Datei herunterladen und per E-Mail an uns senden"],
+  "k.companyLabel":  ["Company name", "Firmenname"],
+  "k.searchCompany": ["e.g. Ningbo Sunrise Co., Ltd.", "z. B. Ningbo Sunrise Co., Ltd."],
+  "k.companyErr":    ["Please enter your company name.", "Bitte den Firmennamen eingeben."],
+  "k.continue":      ["Start", "Los geht’s"],
+  "k.nMembers":      ["{n} people added", "{n} Personen erfasst"],
+  "k.nMember1":      ["1 person added", "1 Person erfasst"],
+  "k.formTitle":     ["Add a person", "Person hinzufügen"],
+  "k.formTitleEdit": ["Edit person", "Person bearbeiten"],
   "k.formSub":       ["Only the name is required — everything else helps us plan better.", "Nur der Name ist Pflicht — alles Weitere hilft uns bei der Planung."],
   "k.change":        ["Change", "Ändern"],
-  "k.team":          ["Already on the team", "Bereits im Team"],
+  "k.renameT":       ["Company name", "Firmenname"],
+  "k.team":          ["Your team", "Ihr Team"],
   "k.teamEmpty1":    ["Nobody yet", "Noch niemand"],
-  "k.teamEmpty2":    ["You are the first one from this company.", "Sie sind die erste Person aus dieser Firma."],
+  "k.teamEmpty2":    ["Fill in the form and press “Add person”. Repeat for everyone in your team.", "Formular ausfüllen und „Person hinzufügen“ drücken. Für jede Person im Team wiederholen."],
   "k.reset":         ["Clear", "Leeren"],
-  "k.submit":        ["Add me to the team", "Eintragen"],
+  "k.submit":        ["Add person", "Person hinzufügen"],
   "k.submitEdit":    ["Save changes", "Änderungen speichern"],
   "k.hint":          ["Only the name is required.", "Nur der Name ist Pflicht."],
   "k.hintEdit":      ["Editing an existing entry.", "Ein bestehender Eintrag wird bearbeitet."],
-  "k.doneTitle":     ["Thank you, {name}!", "Danke, {name}!"],
-  "k.doneText":      ["You are now on the org chart of {company}.", "Sie stehen jetzt im Organigramm von {company}."],
-  "k.addAnother":    ["Add someone else", "Weitere Person"],
-  "k.finish":        ["Done", "Fertig"],
   "k.dupTitle":      ["Name already exists", "Name existiert bereits"],
   "k.dupText":       ["“{name}” is already on the list for {company}. Add anyway?", "„{name}“ steht bereits auf der Liste von {company}. Trotzdem eintragen?"],
-  "k.pickFirst":     ["Please choose your company first.", "Bitte zuerst die Firma auswählen."],
+  /* Fortschrittsleiste */
+  "k.step1":         ["Add your team", "Team erfassen"],
+  "k.step2":         ["Send us your file", "Datei an uns senden"],
+  "k.stepNone":      ["Nobody added yet", "Noch niemand erfasst"],
+  "k.sendB":         ["Download file", "Datei herunterladen"],
+  "k.stNotYet":      ["Not sent yet", "Noch nicht gesendet"],
+  "k.stChanged":     ["Changed since your last download — please download again", "Seit dem letzten Download geändert — bitte erneut herunterladen"],
+  "k.stDone":        ["Downloaded — please email it to us", "Heruntergeladen — bitte per E-Mail an uns senden"],
+  "k.needPerson":    ["Please add at least one person first.", "Bitte zuerst mindestens eine Person hinzufügen."],
+  "k.pendingT":      ["This person is not on the list yet", "Diese Person steht noch nicht auf der Liste"],
+  "k.pendingX":      ["“{name}” is still in the form and has not been added. Add this person before downloading?", "„{name}“ steht noch im Formular und wurde nicht hinzugefügt. Vor dem Download hinzufügen?"],
+  "k.storageWarn":   ["This browser does not keep your entries (private mode?). Please download your file before you close this page.", "Dieser Browser behält Ihre Einträge nicht (privater Modus?). Bitte die Datei herunterladen, bevor Sie die Seite schließen."],
+
+  /* Nach dem Download */
+  "s.title":         ["Your file is saved", "Ihre Datei ist gespeichert"],
+  "s.file":          ["File: {file}", "Datei: {file}"],
+  "s.step1":         ["Open a new email to the address below.", "Eine neue E-Mail an die Adresse unten öffnen."],
+  "s.step2":         ["Attach the file you just saved.", "Die eben gespeicherte Datei anhängen."],
+  "s.step3":         ["Send it — that’s all.", "Absenden — fertig."],
+  "s.to":            ["Send to", "Senden an"],
+  "s.copy":          ["Copy address", "Adresse kopieren"],
+  "s.copied":        ["Address copied.", "Adresse kopiert."],
+  "s.copyFail":      ["Please copy the address by hand.", "Bitte die Adresse von Hand kopieren."],
+  "s.back":          ["Back to the form", "Zurück zum Formular"],
+  "s.mail":          ["Open email", "E-Mail öffnen"],
+  "s.subject":       ["Design Summit 2026 – {company}", "Design Summit 2026 – {company}"],
+  "s.body":          ["Hello,\n\nattached is our design team for the Design Summit 2026.\n\nCompany: {company}\nFile: {file}\n\nBest regards", "Hallo,\n\nanbei unser Design-Team für den Design Summit 2026.\n\nFirma: {company}\nDatei: {file}\n\nViele Grüße"],
 
   "f.name":          ["Name", "Name"],
   "f.namePh":        ["e.g. Li Wei", "z. B. Li Wei"],
@@ -87,13 +128,10 @@ const STR = {
   "f.addTitle":      ["Add", "Hinzufügen"],
 
   "a.title":         ["Admin", "Admin"],
-  "a.handOver":      ["Hand over iPad", "iPad weitergeben"],
-  "a.pinTitle":      ["Enter PIN", "PIN eingeben"],
-  "a.pinNew":        ["New PIN", "Neue PIN"],
-  "a.pinRepeat":     ["Repeat PIN", "PIN wiederholen"],
-  "a.pinWrong":      ["Wrong PIN", "Falsche PIN"],
-  "a.pinMismatch":   ["The two entries differ.", "Die beiden Eingaben stimmen nicht überein."],
-  "a.pinChanged":    ["PIN changed.", "PIN geändert."],
+  "a.openForm":      ["Open supplier form", "Lieferanten-Formular öffnen"],
+  "a.copyLink":      ["Copy supplier link", "Lieferanten-Link kopieren"],
+  "a.linkCopied":    ["Link copied — send it to your suppliers.", "Link kopiert — einfach an die Lieferanten schicken."],
+  "a.linkCopyFail":  ["Copy failed. The link is: {url}", "Kopieren fehlgeschlagen. Der Link lautet: {url}"],
   "a.supplier":      ["Supplier", "Lieferant"],
   "a.rename":        ["Rename", "Umbenennen"],
   "a.delete":        ["Delete", "Löschen"],
@@ -136,14 +174,14 @@ const STR = {
   "chart.noCat":     ["Special projects", "Sonderprojekte"],
 
   "a.autosaveTag":   ["Autosave", "Autosave"],
-  "a.autosaveText":  ["All entries are stored on this iPad automatically.", "Alle Einträge werden automatisch auf diesem iPad gespeichert."],
+  "a.autosaveText":  ["All entries are stored in this browser automatically.", "Alle Einträge werden automatisch in diesem Browser gespeichert."],
   "a.lastSaved":     ["Last saved: {time}", "Zuletzt gespeichert: {time}"],
   "a.storageWarnTag":["No storage", "Kein Speicher"],
   "a.storageWarnText":["This browser blocks local storage (private mode?). Entries live only until the tab closes — export a JSON backup regularly.","Dieser Browser blockiert den lokalen Speicher (privater Modus?). Einträge bestehen nur bis zum Schließen des Tabs — bitte regelmäßig ein JSON-Backup exportieren."],
   /* Getrennt vom Fall oben: hier ist Speicher grundsaetzlich da, aber voll.
      Andere Ursache, andere Abhilfe – deshalb ein eigener Text. */
   "a.quotaTag":      ["Storage full", "Speicher voll"],
-  "a.quotaText":     ["The storage on this iPad is full — the last entries could NOT be saved. Export a JSON backup now, then delete old restore points or suppliers you no longer need.","Der Speicher dieses iPads ist voll — die letzten Eingaben konnten NICHT gespeichert werden. Jetzt eine JSON-Sicherung exportieren, danach alte Wiederherstellungspunkte oder nicht mehr benötigte Lieferanten löschen."],
+  "a.quotaText":     ["The storage of this browser is full — the last entries could NOT be saved. Export a JSON backup now, then delete old restore points or suppliers you no longer need.","Der Speicher dieses Browsers ist voll — die letzten Eingaben konnten NICHT gespeichert werden. Jetzt eine JSON-Sicherung exportieren, danach alte Wiederherstellungspunkte oder nicht mehr benötigte Lieferanten löschen."],
 
   "a.export":        ["Export", "Export"],
   "a.excelT":        ["Excel workbook", "Excel-Arbeitsmappe"],
@@ -157,9 +195,9 @@ const STR = {
   "a.jsonB":         ["Save backup", "Sicherung speichern"],
   "a.forwardB":      ["Only this supplier", "Nur dieser Lieferant"],
   "a.import":        ["Import", "Import"],
-  "a.impJsonT":      ["JSON file", "JSON-Datei"],
-  "a.impJsonS":      ["Adds the suppliers from the file to the existing ones.", "Fügt die Lieferanten aus der Datei zu den bestehenden hinzu."],
-  "a.impJsonB":      ["Import JSON", "JSON importieren"],
+  "a.impJsonT":      ["JSON files from suppliers", "JSON-Dateien der Lieferanten"],
+  "a.impJsonS":      ["Select several files at once. Suppliers already in the list are merged, people already present are skipped.", "Mehrere Dateien auf einmal auswählen. Vorhandene Lieferanten werden zusammengeführt, vorhandene Personen übersprungen."],
+  "a.impJsonB":      ["Import JSON files", "JSON-Dateien importieren"],
   "a.impExcelT":     ["Excel / CSV file", "Excel- / CSV-Datei"],
   "a.impExcelS":     ["Recognises German and English column headers.", "Erkennt deutsche und englische Spaltenüberschriften."],
   "a.impExcelB":     ["Import Excel", "Excel importieren"],
@@ -174,22 +212,10 @@ const STR = {
   "a.snapConfirm":   ["Restore this state? The current state will be overwritten — a restore point is created beforehand.", "Diesen Stand wiederherstellen? Der aktuelle Stand wird überschrieben — vorher wird ein Wiederherstellungspunkt angelegt."],
 
   "a.settings":      ["Settings", "Einstellungen"],
-  "a.kioskT":        ["Company selection in kiosk mode", "Firmenauswahl im Kiosk-Modus"],
-  "a.kioskS":        ["“Free” lets each person pick their own company. “Locked” keeps the kiosk on the supplier selected above.", "„Frei“ lässt jede Person die eigene Firma wählen. „Fest“ hält den Kiosk auf dem oben gewählten Lieferanten."],
-  "a.kioskFree":     ["Free", "Frei"],
-  "a.kioskLocked":   ["Locked", "Fest"],
-  "a.pinT":          ["Admin PIN", "Admin-PIN"],
-  "a.pinS":          ["Four digits. Protects exports, deletion and the org chart while the iPad is being passed around.", "Vier Ziffern. Schützt Export, Löschen und Organigramm, während das iPad herumgegeben wird."],
-  "a.pinB":          ["Change PIN", "PIN ändern"],
   "a.wipeT":         ["Delete all data", "Alle Daten löschen"],
-  "a.wipeS":         ["Removes every supplier and person from this iPad. Export a backup first.", "Entfernt alle Lieferanten und Personen von diesem iPad. Vorher eine Sicherung exportieren."],
+  "a.wipeS":         ["Removes every supplier and person from this browser. Export a backup first.", "Entfernt alle Lieferanten und Personen aus diesem Browser. Vorher eine Sicherung exportieren."],
   "a.wipeB":         ["Reset app", "App zurücksetzen"],
-  "a.aboutT":        ["Offline status", "Offline-Status"],
-  "a.swOn":          ["Ready — the app also works without internet.", "Bereit — die App funktioniert auch ohne Internet."],
-  "a.swOff":         ["Not active — the app needs internet. Serve the folder over https (or localhost), then reload once.", "Nicht aktiv — die App braucht Internet. Ordner über https (oder localhost) ausliefern und einmal neu laden."],
-  "a.swPending":     ["Files stored. Restart the app once, then offline mode is complete.", "Dateien abgelegt. App einmal neu starten, dann ist der Offline-Betrieb fertig."],
-  "a.swErr":         ["Offline setup FAILED — the app needs internet: {msg}", "Offline-Einrichtung FEHLGESCHLAGEN — die App braucht Internet: {msg}"],
-  "a.swWarnTag":     ["Not offline", "Nicht offline"],
+  "a.aboutT":        ["Version", "Version"],
 
   "c.delMemberT":    ["Delete person", "Person löschen"],
   "c.delMemberX":    ["Remove “{name}” from the list?", "„{name}“ von der Liste entfernen?"],
@@ -197,10 +223,10 @@ const STR = {
   "c.delSupX":       ["Delete “{name}” including all {n} people? This cannot be undone.", "„{name}“ samt aller {n} Personen löschen? Das kann nicht rückgängig gemacht werden."],
   "c.renameT":       ["Rename supplier", "Lieferant umbenennen"],
   "c.mergeT":        ["Supplier already exists", "Lieferant existiert bereits"],
-  "c.mergeX":        ["Already on this iPad: {names}. Merge the file into these existing entries? People who are already there stay untouched, only new ones are added. Cancel imports nothing.","Schon auf diesem iPad vorhanden: {names}. Die Datei in diese bestehenden Einträge zusammenführen? Bereits vorhandene Personen bleiben unverändert, nur neue kommen hinzu. Abbrechen importiert nichts."],
+  "c.mergeX":        ["Already in your list: {names}. Merge the file into these existing entries? People who are already there stay untouched, only new ones are added. Cancel imports nothing.","Schon in Ihrer Liste: {names}. Die Datei in diese bestehenden Einträge zusammenführen? Bereits vorhandene Personen bleiben unverändert, nur neue kommen hinzu. Abbrechen importiert nichts."],
   "c.mergeB":        ["Merge", "Zusammenführen"],
   "c.wipeT":         ["Reset app", "App zurücksetzen"],
-  "c.wipeX":         ["Really delete all suppliers and people from this iPad?", "Wirklich alle Lieferanten und Personen von diesem iPad löschen?"],
+  "c.wipeX":         ["Really delete all suppliers and people from this browser?", "Wirklich alle Lieferanten und Personen aus diesem Browser löschen?"],
 
   "t.added":         ["{name} added.", "{name} hinzugefügt."],
   "t.changed":       ["Changes saved.", "Änderungen gespeichert."],
@@ -223,6 +249,8 @@ const STR = {
   "t.impExcelNone":  ["No usable rows found.", "Keine verwertbaren Zeilen gefunden."],
   "t.impMerged":     ["Merged: {added} people added, {skipped} already present.", "Zusammengeführt: {added} Personen ergänzt, {skipped} waren schon vorhanden."],
   "t.impCancelled":  ["Import cancelled — nothing changed.", "Import abgebrochen — nichts geändert."],
+  "t.impBatch":      ["{ok} of {n} files imported: {added} people added, {skipped} already present.", "{ok} von {n} Dateien importiert: {added} Personen ergänzt, {skipped} waren schon vorhanden."],
+  "t.impBatchFail":  ["Could not read: {files}", "Nicht lesbar: {files}"],
   "t.xlsxMissing":   ["Excel library not available.", "Excel-Bibliothek nicht verfügbar."],
   "t.snapOk":        ["State restored.", "Stand wiederhergestellt."],
   "t.wiped":         ["App reset.", "App zurückgesetzt."],
@@ -273,7 +301,7 @@ function defaultStore() {
     availableLanguages: [...DEFAULT_LANGUAGES],
     suppliers: [],
     currentSupplierId: null,
-    settings: { lang: "en", pin: "2026", kioskMode: "choose" },
+    settings: { lang: "en" },
     savedAt: null
   };
 }
@@ -282,8 +310,6 @@ let store = defaultStore();
 let storageOK = true;
 let storageFail = "blocked";   // blocked = privater Modus | quota = Speicher voll
 let lastSavedAt = null;
-let swState = "off";     // off | pending | ready | error
-let swError = "";
 
 function lsGet(key) { try { return window.localStorage.getItem(key); } catch (e) { return null; } }
 function lsSet(key, val) { try { window.localStorage.setItem(key, val); return true; } catch (e) { return false; } }
@@ -311,7 +337,9 @@ function loadState() {
     store.suppliers = d.suppliers.map(s => ({
       id: s.id || uid("sup"),
       name: s.name || "",
-      employees: (s.employees || []).map(normEmp)
+      employees: (s.employees || []).map(normEmp),
+      // Fingerabdruck des Stands beim letzten Download (Lieferanten-Ansicht)
+      exportedSig: s.exportedSig || ""
     }));
     if (!store.suppliers.some(s => s.id === store.currentSupplierId)) {
       store.currentSupplierId = store.suppliers[0] ? store.suppliers[0].id : null;
@@ -345,6 +373,9 @@ function readSnaps() {
   catch (e) { return []; }
 }
 function addSnapshot(kind) {
+  // Wiederherstellungspunkte sind ein Admin-Werkzeug. Beim Lieferanten wuerden
+  // sie nur Speicher belegen, den er nie zu sehen bekommt.
+  if (MODE !== "admin") return;
   if (!store.suppliers.length) return;
   const snaps = readSnaps();
   const payload = JSON.stringify({
@@ -427,12 +458,12 @@ function fmtTime(iso) {
 function isEmail(v) { return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v); }
 function toggleIn(arr, v) { const i = arr.indexOf(v); if (i < 0) arr.push(v); else arr.splice(i, 1); }
 
-function toast(msg) {
+function toast(msg, ms) {
   const n = $("toast");
   n.textContent = msg;
   n.classList.add("show");
   clearTimeout(n._t);
-  n._t = setTimeout(() => n.classList.remove("show"), 2800);
+  n._t = setTimeout(() => n.classList.remove("show"), ms || 2800);
 }
 
 /* ---- Modal statt confirm()/prompt() ---- */
@@ -657,7 +688,7 @@ function syncFormLabels() {
   const editing = !!editingId;
   $("kSubmit").textContent   = t(editing ? "k.submitEdit" : "k.submit");
   $("kHint").textContent     = t(editing ? "k.hintEdit" : "k.hint");
-  $("kFormTitle").textContent = t("k.formTitle");
+  $("kFormTitle").textContent = t(editing ? "k.formTitleEdit" : "k.formTitle");
   $("aSubmit").textContent   = t(editing ? "a.saveChanges" : "a.saveMember");
   $("aFormTitle").textContent = t(editing ? "a.editMember" : "a.addMember");
 }
@@ -703,111 +734,91 @@ function commitDraft(sup) {
 }
 
 /* ============================================================
-   5. Kiosk
+   5. Lieferanten-Ansicht
+   Ablauf: Firma eingeben -> Personen erfassen -> Datei herunterladen
+   -> per Mail an SEND_TO. Der Browser gehoert dem Lieferanten, also
+   bleibt die Firma ueber Neuladen hinweg stehen und alle Eintraege
+   sind bearbeitbar.
    ============================================================ */
-
-let mine = new Set();     // in dieser Sitzung erfasste Personen
 
 function showScreen(which) {
   $("kioskScreen").classList.toggle("hidden", which !== "kiosk");
   $("adminScreen").classList.toggle("hidden", which !== "admin");
 }
 
-function kioskStep() {
-  const locked = store.settings.kioskMode === "locked";
-  const sup = curSup();
-  const needPick = !locked && !sup;
-  return needPick ? "pick" : (sup ? "enter" : "pick");
-}
+function kioskStep() { return curSup() ? "enter" : "pick"; }
 
 function renderKiosk() {
   const step = kioskStep();
   $("kPick").classList.toggle("hidden", step !== "pick");
   $("kEnter").classList.toggle("hidden", step !== "enter");
   $("kBar").classList.toggle("hidden", step !== "enter");
+  $("kSteps").classList.toggle("hidden", step !== "enter");
+  if (step === "pick") return;
 
-  if (step === "pick") {
-    renderSuggestions();
-    return;
-  }
   const sup = curSup();
   $("kCompanyName").textContent = nameOr(sup.name);
-  $("kCompanyChip").classList.toggle("hidden", store.settings.kioskMode === "locked");
   if (formHost !== $("kFormHost")) mountForm($("kFormHost")); else renderFormState();
   renderKioskTeam();
   syncFormLabels();
 }
 
-function renderSuggestions() {
-  const q = $("kCompanyInput").value.trim();
-  const box = $("kSugg");
-  box.innerHTML = "";
-  if (!q) return;
-  const ql = q.toLowerCase();
-  const hits = store.suppliers
-    .filter(s => (s.name || "").toLowerCase().includes(ql))
-    .sort((a, b) => a.name.localeCompare(b.name))
-    .slice(0, 6);
-  hits.forEach(s => {
-    const b = el("button", null, null);
-    b.type = "button";
-    b.appendChild(document.createTextNode(nameOr(s.name)));
-    b.appendChild(el("span", "s2", t("k.nMembers", { n: s.employees.length })));
-    b.onclick = () => pickCompany(s.id);
-    box.appendChild(b);
-  });
-  const exact = store.suppliers.some(s => (s.name || "").toLowerCase() === ql);
-  if (!exact) {
-    const b = el("button", "new", null);
-    b.type = "button";
-    b.appendChild(document.createTextNode("+ " + q));
-    b.appendChild(el("span", "s2", t("k.createNew")));
-    b.onclick = () => {
-      const s = { id: uid("sup"), name: q, employees: [] };
-      store.suppliers.push(s);
-      saveState();
-      pickCompany(s.id);
-    };
-    box.appendChild(b);
-  } else if (!hits.length) {
-    box.appendChild(el("div", "help", t("k.noMatch")));
+/* Startseite: aus dem eingegebenen Namen wird die Firma. Liegt schon eine
+   gleichnamige vor (Lieferant hat neu angefangen), wird diese weiterbenutzt. */
+function startCompany() {
+  const inp = $("kCompanyInput");
+  const name = inp.value.trim();
+  $("kCompanyErr").classList.toggle("show", !name);
+  if (!name) { inp.focus(); return; }
+  let sup = findSupByName(name);
+  if (!sup) {
+    sup = { id: uid("sup"), name, employees: [], exportedSig: "" };
+    store.suppliers.push(sup);
   }
-}
-
-/* Suchfeld leeren, damit die naechste Person nicht den Firmennamen
-   der vorherigen im Feld stehen sieht. */
-function resetPicker() {
-  $("kCompanyInput").value = "";
-  $("kSugg").innerHTML = "";
+  pickCompany(sup.id);
 }
 
 function pickCompany(id) {
   store.currentSupplierId = id;
-  mine = new Set();
   resetDraft();
-  resetPicker();
-  saveState();
+  $("kCompanyInput").value = "";
+  saveState(true);
   renderKiosk();
   $("kioskBody").scrollTop = 0;
   setTimeout(() => { if (FE) FE.name.focus(); }, 120);
+}
+
+/* "Aendern" am Firmen-Chip benennt um, statt eine zweite Firma anzulegen:
+   Meist ist es ein Tippfehler, und die erfassten Personen sollen bleiben. */
+function renameCompany() {
+  const sup = curSup();
+  if (!sup) return;
+  promptSheet(t("k.renameT"), sup.name, v => {
+    const name = (v || "").trim();
+    if (!name) return;
+    sup.name = name;
+    saveState(true);
+    renderKiosk();
+  });
 }
 
 function renderKioskTeam() {
   const sup = curSup();
   const host = $("kTeamList");
   host.innerHTML = "";
-  $("kTeamCount").textContent = t("k.nMembers", { n: sup ? sup.employees.length : 0 });
+  $("kTeamCount").textContent = peopleCount(sup ? sup.employees.length : 0);
+  renderSteps();
   if (!sup || !sup.employees.length) {
     host.appendChild(emptyBox("k.teamEmpty1", "k.teamEmpty2"));
     return;
   }
   const list = el("div", "mlist");
-  sortedEmployees(sup).forEach(emp => list.appendChild(memberCard(emp, mine.has(emp.id))));
+  sortedEmployees(sup).forEach(emp => list.appendChild(memberCard(emp, true)));
   host.appendChild(list);
 }
 
 function memberCard(emp, editable) {
-  const row = el("div", "member" + (emp.isLead ? " is-lead" : "") + (editable ? " mine" : ""));
+  const row = el("div", "member" + (emp.isLead ? " is-lead" : ""));
   const main = el("div", "m-main");
   main.appendChild(el("div", "m-name", nameOr(emp.name)));
   if (emp.email) main.appendChild(el("div", "m-meta", emp.email));
@@ -848,33 +859,34 @@ function sortedEmployees(sup) {
   });
 }
 
-function kioskSubmit() {
+/* then: optional, wird nach erfolgreichem Hinzufuegen aufgerufen (Download-Weg) */
+function kioskSubmit(then) {
   const sup = curSup();
-  if (!sup) { toast(t("k.pickFirst")); return; }
+  if (!sup) return;
   if (!validateDraft()) return;
   const dup = sup.employees.some(e =>
     e.id !== editingId && nameOr(e.name).toLowerCase() === draft.name.toLowerCase());
   if (dup && !editingId) {
     confirmSheet(t("k.dupTitle"), t("k.dupText", { name: draft.name, company: nameOr(sup.name) }),
-      () => finishKioskSubmit(sup));
+      () => finishKioskSubmit(sup, then));
     return;
   }
-  finishKioskSubmit(sup);
+  finishKioskSubmit(sup, then);
 }
 
-function finishKioskSubmit(sup) {
+/* Kein "Danke"-Dialog mehr nach jeder Person: Der Lieferant erfasst meist
+   mehrere Leute hintereinander. Kurze Meldung, Formular leer, Liste waechst. */
+function finishKioskSubmit(sup, then) {
   const r = commitDraft(sup);
-  if (r.isNew) mine.add(r.emp.id);
   const nm = r.emp.name;
   resetDraft();
   saveState(true);
   renderFormState();
   renderKioskTeam();
-  renderAdminIfVisible();
-  if (!r.isNew) { toast(t("t.changed")); $("kioskBody").scrollTop = 0; return; }
-  $("doneTitle").textContent = t("k.doneTitle", { name: nm });
-  $("doneText").textContent  = t("k.doneText", { company: nameOr(sup.name) });
-  $("doneOverlay").classList.remove("hidden");
+  toast(r.isNew ? t("t.added", { name: nm }) : t("t.changed"));
+  $("kioskBody").scrollTop = 0;
+  if (typeof then === "function") { then(); return; }
+  setTimeout(() => { if (FE) FE.name.focus(); }, 120);
 }
 
 function startEdit(id, from) {
@@ -904,7 +916,6 @@ function askDelete(id) {
   if (!e) return;
   confirmSheet(t("c.delMemberT"), t("c.delMemberX", { name: nameOr(e.name) }), () => {
     sup.employees = sup.employees.filter(x => x.id !== id);
-    mine.delete(id);
     if (editingId === id) resetDraft();
     saveState(true);
     renderKioskTeam();
@@ -912,6 +923,109 @@ function askDelete(id) {
     renderAdminIfVisible();
     toast(t("t.deleted"));
   }, t("btn.delete"));
+}
+
+/* ---- Senden: Datei herunterladen, dann per Mail ----
+   Ob der aktuelle Stand schon heruntergeladen wurde, merkt sich ein
+   Fingerabdruck der Personenliste. Aendert sich danach etwas, steht der
+   Status wieder auf "geaendert" – damit keine veraltete Datei verschickt wird. */
+function teamSig(sup) {
+  const s = JSON.stringify([sup.name, sup.employees.map(cleanEmp(sup.id))]);
+  let h = 5381;
+  for (let i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) | 0;
+  return String(h >>> 0);
+}
+
+function peopleCount(n) { return n === 1 ? t("k.nMember1") : t("k.nMembers", { n }); }
+
+function renderSteps() {
+  const sup = curSup();
+  if (!sup) return;
+  const n = sup.employees.length;
+  $("kStepCount").textContent = n ? peopleCount(n) : t("k.stepNone");
+  $("kStep1").classList.toggle("ok", n > 0);
+
+  const st = !n ? "none" : !sup.exportedSig ? "new" : sup.exportedSig === teamSig(sup) ? "done" : "changed";
+  $("kSendState").textContent =
+    st === "none" ? t("k.needPerson") : st === "done" ? t("k.stDone") : st === "changed" ? t("k.stChanged") : t("k.stNotYet");
+  $("kStep2").classList.toggle("ok", st === "done");
+  $("kStep2").classList.toggle("warn", st === "changed");
+  $("kSend").disabled = !n;
+}
+
+function supplierFileName(sup) { return "design-summit-2026_" + slug(sup.name) + ".json"; }
+
+/* Nur die tatsaechlich benutzten Werte mitschicken. Sonst landen beim Import
+   auch Tippfehler, die der Lieferant gleich wieder abgewaehlt hat, in unseren
+   Filterlisten. */
+function usedValues(sup, key) {
+  const set = new Set();
+  sup.employees.forEach(e => (e[key] || []).forEach(v => set.add(v)));
+  return [...set];
+}
+
+/* Steht noch eine Person im Formular, die nicht hinzugefuegt wurde, wuerde
+   sie in der Datei fehlen. Lieber einmal nachfragen. */
+function sendFile() {
+  const sup = curSup();
+  if (!sup) return;
+  const pending = FE && (FE.name.value.trim() || FE.email.value.trim() || FE.phone.value.trim());
+  if (pending) {
+    const nm = FE.name.value.trim() || FE.email.value.trim() || FE.phone.value.trim();
+    confirmSheet(t("k.pendingT"), t("k.pendingX", { name: nm }),
+      () => kioskSubmit(() => sendFile()), t("k.submit"));
+    return;
+  }
+  if (!sup.employees.length) { toast(t("k.needPerson")); return; }
+  downloadSupplierFile(sup);
+}
+
+async function downloadSupplierFile(sup) {
+  const payload = {
+    type: "supplier-export", version: 1, appVersion: APP_VERSION,
+    exportedAt: new Date().toISOString(),
+    supplier: { id: sup.id, name: sup.name },
+    employees: sup.employees.map(cleanEmp(sup.id)),
+    availableCategories: usedValues(sup, "categories"),
+    availableCad: usedValues(sup, "cad"),
+    available2d: usedValues(sup, "twoD"),
+    availableAi: usedValues(sup, "ai"),
+    availableLanguages: usedValues(sup, "languages")
+  };
+  const file = supplierFileName(sup);
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+  const how = await deliverFile(blob, file, "application/json");
+  if (how === "aborted") return;
+  sup.exportedSig = teamSig(sup);
+  saveState(true);
+  renderSteps();
+  openSendOverlay(sup, file);
+}
+
+function openSendOverlay(sup, file) {
+  $("sendFile").textContent = t("s.file", { file });
+  $("sendAddr").textContent = SEND_TO;
+  const subject = t("s.subject", { company: nameOr(sup.name) });
+  const body = t("s.body", { company: nameOr(sup.name), file });
+  // encodeURIComponent statt URLSearchParams: Mailprogramme lesen "+" sonst als Pluszeichen
+  $("sendMail").href = "mailto:" + SEND_TO + "?subject=" + encodeURIComponent(subject) +
+                       "&body=" + encodeURIComponent(body);
+  $("sendOverlay").classList.remove("hidden");
+}
+
+async function copyText(text) {
+  try {
+    if (navigator.clipboard && window.isSecureContext) { await navigator.clipboard.writeText(text); return true; }
+  } catch (e) { /* weiter mit dem Rueckfall */ }
+  try {
+    const ta = document.createElement("textarea");
+    ta.value = text; ta.setAttribute("readonly", "");
+    ta.style.position = "fixed"; ta.style.opacity = "0";
+    document.body.appendChild(ta); ta.select();
+    const ok = document.execCommand("copy");
+    ta.remove();
+    return ok;
+  } catch (e) { return false; }
 }
 
 /* ============================================================
@@ -936,8 +1050,6 @@ function adminTab(which) {
 
 function openAdmin() {
   adminOpen = true;
-  // Im Kiosk-Modus „Frei“ ist die Auswahl beim Weitergeben geleert worden –
-  // fuer den Admin wieder einen Lieferanten vorbelegen.
   if (!curSup() && store.suppliers.length) store.currentSupplierId = store.suppliers[0].id;
   showScreen("admin");
   mountForm($("aFormHost"));
@@ -950,17 +1062,11 @@ function openAdmin() {
   renderSnapList();
 }
 
-function handOver() {
-  adminOpen = false;
-  resetDraft();
-  mine = new Set();
-  showScreen("kiosk");
-  if (store.settings.kioskMode === "choose") {
-    store.currentSupplierId = null;
-    resetPicker();
-    saveState();
-  }
-  renderKiosk();
+/* Link fuer die Lieferanten: dieselbe Seite ohne ?admin */
+async function copySupplierLink() {
+  const url = location.origin + location.pathname;
+  const ok = await copyText(url);
+  toast(ok ? t("a.linkCopied") : t("a.linkCopyFail", { url }));
 }
 
 function renderSaveInfo() {
@@ -1069,22 +1175,7 @@ function deleteSupplier() {
   }, t("btn.delete"));
 }
 
-function renderSwStatus() {
-  if (navigator.serviceWorker && navigator.serviceWorker.controller && swState !== "error") swState = "ready";
-  const msg = swState === "ready"   ? t("a.swOn")
-            : swState === "pending" ? t("a.swPending")
-            : swState === "error"   ? t("a.swErr", { msg: swError })
-            :                         t("a.swOff");
-  $("swStatus").textContent = msg;
-  const bad = (swState === "error" || swState === "off");
-  $("swWarn").classList.toggle("hidden", !bad);
-  $("swWarnText").textContent = msg;
-}
-
 function renderSettings() {
-  document.querySelectorAll("#segKiosk button").forEach(b =>
-    b.classList.toggle("on", b.dataset.kiosk === store.settings.kioskMode));
-  renderSwStatus();
   $("verLabel").textContent = "v" + APP_VERSION;
 }
 
@@ -1114,7 +1205,6 @@ function wipeAll() {
     store = defaultStore();
     store.settings = keep;
     resetDraft();
-    mine = new Set();
     saveState(true);
     mountForm($("aFormHost"));
     renderAll();
@@ -1122,63 +1212,9 @@ function wipeAll() {
   }, t("btn.delete"));
 }
 
-/* ============================================================
-   7. PIN
-   ============================================================ */
-
-let pinState = null;   // {mode:'unlock'|'new'|'repeat', buf:'', first:''}
-
-function openPin(mode) {
-  pinState = { mode, buf: "", first: pinState && pinState.first || "" };
-  $("pinTitle").textContent = mode === "unlock" ? t("a.pinTitle") : mode === "new" ? t("a.pinNew") : t("a.pinRepeat");
-  $("pinErr").textContent = "";
-  drawPinDots();
-  $("pinOverlay").classList.remove("hidden");
-}
-function closePin() { $("pinOverlay").classList.add("hidden"); pinState = null; }
-function drawPinDots() {
-  const n = pinState ? pinState.buf.length : 0;
-  $("pinDots").querySelectorAll("i").forEach((d, i) => d.classList.toggle("on", i < n));
-}
-function pinKey(k) {
-  if (!pinState) return;
-  if (k === "x") { closePin(); return; }
-  if (k === "b") { pinState.buf = pinState.buf.slice(0, -1); drawPinDots(); $("pinErr").textContent = ""; return; }
-  if (pinState.buf.length >= 4) return;
-  pinState.buf += k;
-  drawPinDots();
-  if (pinState.buf.length < 4) return;
-
-  const entered = pinState.buf;
-  if (pinState.mode === "unlock") {
-    if (entered === (store.settings.pin || "2026")) { closePin(); openAdmin(); }
-    else { $("pinErr").textContent = t("a.pinWrong"); pinState.buf = ""; setTimeout(drawPinDots, 160); }
-    return;
-  }
-  if (pinState.mode === "new") {
-    const first = entered;
-    closePin();
-    pinState = { mode: "repeat", buf: "", first };
-    openPin("repeat");
-    pinState.first = first;
-    return;
-  }
-  if (pinState.mode === "repeat") {
-    if (entered === pinState.first) {
-      store.settings.pin = entered;
-      saveState(true);
-      closePin();
-      toast(t("a.pinChanged"));
-    } else {
-      $("pinErr").textContent = t("a.pinMismatch");
-      pinState.buf = "";
-      setTimeout(drawPinDots, 160);
-    }
-  }
-}
 
 /* ============================================================
-   8. Organigramm
+   7. Organigramm
    ============================================================ */
 
 const filters = { cat: "", cad: "", twoD: "", ai: "", search: "" };
@@ -1504,7 +1540,7 @@ function setScale(v) { fitMode = false; currentScale = Math.max(0.15, Math.min(2
 })();
 
 /* ============================================================
-   9. Export / Import
+   8. Export / Import
    ============================================================ */
 
 function empRow(e) {
@@ -1697,33 +1733,59 @@ function confirmImport(list, onGo, onCancel) {
     () => onGo(true), t("c.mergeB"), onCancel);
 }
 
+/* Liest eine JSON-Datei und uebernimmt sie. Meldet nicht selbst, sondern gibt
+   ein Ergebnis zurueck – so kann der Mehrfach-Import eine Sammelmeldung zeigen. */
 function importJsonFile(file) {
-  const r = new FileReader();
-  r.onload = () => {
-    let list, pools;
-    try {
-      const d = JSON.parse(r.result);
-      if (d.type === "supplier-workspace" && Array.isArray(d.suppliers)) {
-        list = d.suppliers.map(s => ({ id: s.id, name: s.name || "", employees: (s.employees || []).map(normEmp) }));
-      } else if (d.supplier && Array.isArray(d.employees)) {
-        list = [{ id: d.supplier.id, name: d.supplier.name || "", employees: d.employees.map(normEmp) }];
-      } else throw new Error("format");
-      pools = d;
-    } catch (e) { toast(t("t.impFail")); return; }
+  return new Promise(resolve => {
+    const r = new FileReader();
+    r.onerror = () => resolve({ status: "fail", file: file.name });
+    r.onload = () => {
+      let list, pools;
+      try {
+        const d = JSON.parse(r.result);
+        if (d.type === "supplier-workspace" && Array.isArray(d.suppliers)) {
+          list = d.suppliers.map(s => ({ id: s.id, name: s.name || "", employees: (s.employees || []).map(normEmp) }));
+        } else if (d.supplier && Array.isArray(d.employees)) {
+          list = [{ id: d.supplier.id, name: d.supplier.name || "", employees: d.employees.map(normEmp) }];
+        } else throw new Error("format");
+        pools = d;
+      } catch (e) { resolve({ status: "fail", file: file.name }); return; }
 
-    confirmImport(list, merge => {
-      addSnapshot("import");
-      mergePools(pools.availableCategories, pools.availableCad, pools.available2d, pools.availableAi, pools.availableLanguages);
-      const res = applyImportedSuppliers(list, merge);
-      resetDraft();
-      saveState(true);
-      renderAll();
-      if (merge) toast(t("t.impMerged", res));
-      else if (list.length === 1) toast(t("t.impOne", { name: nameOr(list[0].name) }));
-      else toast(t("t.impOk", { n: list.length }));
-    }, () => toast(t("t.impCancelled")));
-  };
-  r.readAsText(file);
+      confirmImport(list, merge => {
+        mergePools(pools.availableCategories, pools.availableCad, pools.available2d, pools.availableAi, pools.availableLanguages);
+        const res = applyImportedSuppliers(list, merge);
+        resolve({ status: "ok", file: file.name, merge, list, added: res.added, skipped: res.skipped });
+      }, () => resolve({ status: "cancel", file: file.name }));
+    };
+    r.readAsText(file);
+  });
+}
+
+/* Mehrere Lieferanten-Dateien nacheinander einlesen. Ein einziger
+   Wiederherstellungspunkt fuer den ganzen Stapel: einer pro Datei wuerde ab
+   der sechsten Datei den Stand von vor dem Import aus der Liste schieben. */
+async function importJsonFiles(files) {
+  addSnapshot("import");
+  const results = [];
+  for (const f of files) results.push(await importJsonFile(f));
+  const ok = results.filter(r => r.status === "ok");
+  const failed = results.filter(r => r.status === "fail");
+  if (ok.length) { resetDraft(); saveState(true); renderAll(); }
+
+  if (files.length === 1) {
+    const r = results[0];
+    if (r.status === "fail") toast(t("t.impFail"));
+    else if (r.status === "cancel") toast(t("t.impCancelled"));
+    else if (r.merge) toast(t("t.impMerged", r));
+    else if (r.list.length === 1) toast(t("t.impOne", { name: nameOr(r.list[0].name) }));
+    else toast(t("t.impOk", { n: r.list.length }));
+    return;
+  }
+  const added = ok.reduce((n, r) => n + r.added, 0);
+  const skipped = ok.reduce((n, r) => n + r.skipped, 0);
+  let msg = t("t.impBatch", { ok: ok.length, n: files.length, added, skipped });
+  if (failed.length) msg += " " + t("t.impBatchFail", { files: failed.map(r => r.file).join(", ") });
+  toast(msg, 7000);
 }
 
 function importExcelFile(file) {
@@ -1807,7 +1869,7 @@ function importExcelFile(file) {
 }
 
 /* ============================================================
-   10. Verdrahtung
+   9. Verdrahtung
    ============================================================ */
 
 function renderAll() {
@@ -1839,46 +1901,25 @@ document.querySelectorAll(".langsw button").forEach(b => {
   b.onclick = () => setLang(b.dataset.lang);
 });
 
-$("btnLock").onclick = () => openPin("unlock");
-$("btnHandOver").onclick = handOver;
-$("pinPad").addEventListener("click", e => {
-  const b = e.target.closest("button[data-k]");
-  if (b) pinKey(b.dataset.k);
-});
-$("pinOverlay").addEventListener("click", e => { if (e.target === $("pinOverlay")) closePin(); });
-
-$("kCompanyInput").addEventListener("input", renderSuggestions);
+/* ---- Lieferanten-Ansicht ---- */
+$("kContinue").onclick = startCompany;
 $("kCompanyInput").addEventListener("keydown", e => {
-  if (e.key === "Enter") { e.preventDefault(); const b = $("kSugg").querySelector("button"); if (b) b.click(); }
+  if (e.key === "Enter") { e.preventDefault(); startCompany(); }
 });
-$("kChangeCompany").onclick = () => {
-  store.currentSupplierId = null;
-  mine = new Set();
-  resetDraft();
-  resetPicker();
-  saveState();
-  renderKiosk();
-};
-$("kSubmit").onclick = kioskSubmit;
+$("kCompanyInput").addEventListener("input", () => $("kCompanyErr").classList.remove("show"));
+$("kChangeCompany").onclick = renameCompany;
+$("kSubmit").onclick = () => kioskSubmit();
 $("kReset").onclick = () => { resetDraft(); renderFormState(); renderKioskTeam(); };
-$("doneAnother").onclick = () => {
-  $("doneOverlay").classList.add("hidden");
-  resetDraft(); renderFormState();
-  $("kioskBody").scrollTop = 0;
-  setTimeout(() => { if (FE) FE.name.focus(); }, 120);
-};
-$("doneFinish").onclick = () => {
-  $("doneOverlay").classList.add("hidden");
-  resetDraft();
-  if (store.settings.kioskMode === "choose") {
-    store.currentSupplierId = null;
-    mine = new Set();
-    resetPicker();
-    saveState();
-  }
-  renderKiosk();
-  $("kioskBody").scrollTop = 0;
-};
+$("kSend").onclick = sendFile;
+
+$("sendBack").onclick = () => $("sendOverlay").classList.add("hidden");
+$("sendCopy").onclick = async () => toast(t((await copyText(SEND_TO)) ? "s.copied" : "s.copyFail"));
+$("sendOverlay").addEventListener("click", e => {
+  if (e.target === $("sendOverlay")) $("sendOverlay").classList.add("hidden");
+});
+
+/* ---- Admin ---- */
+$("btnCopyLink").onclick = copySupplierLink;
 
 $("tabMembers").onclick = () => adminTab("members");
 $("tabChart").onclick   = () => adminTab("chart");
@@ -1904,7 +1945,7 @@ $("btnSaveJson").onclick = () => saveJson(false);
 $("btnForward").onclick = () => saveJson(true);
 $("btnImportJson").onclick  = () => $("fileInput").click();
 $("btnImportExcel").onclick = () => $("excelInput").click();
-$("fileInput").onchange  = e => { const f = e.target.files[0]; if (f) importJsonFile(f); e.target.value = ""; };
+$("fileInput").onchange  = e => { const fs = [...e.target.files]; e.target.value = ""; if (fs.length) importJsonFiles(fs); };
 $("excelInput").onchange = e => { const f = e.target.files[0]; if (f) importExcelFile(f); e.target.value = ""; };
 
 $("filterCat").onchange = e => { filters.cat = e.target.value; renderChart(); };
@@ -1916,10 +1957,6 @@ $("zoomIn").onclick  = () => setScale(currentScale + 0.1);
 $("zoomOut").onclick = () => setScale(currentScale - 0.1);
 $("zoomFit").onclick = () => { fitMode = true; applyZoom(); };
 
-document.querySelectorAll("#segKiosk button").forEach(b => {
-  b.onclick = () => { store.settings.kioskMode = b.dataset.kiosk; saveState(true); renderSettings(); };
-});
-$("btnChangePin").onclick = () => openPin("new");
 $("btnWipe").onclick = wipeAll;
 
 /* Viewport-Hoehe: haelt die Aktionsleiste ueber der iOS-Tastatur */
@@ -1960,47 +1997,41 @@ window.addEventListener("resize", () => { clearTimeout(_rz); _rz = setTimeout(ap
 if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => applyZoom());
 
 /* ============================================================
-   11. Start
+   10. Start
    ============================================================ */
+
+/* Excel-, Bild- und PDF-Bibliothek nur im Admin laden. Die Export-/Import-
+   Funktionen pruefen ohnehin per typeof, ob sie schon da sind. */
+function loadVendorScripts() {
+  ["vendor/xlsx.full.min.js", "vendor/html2canvas.min.js", "vendor/jspdf.umd.min.js"].forEach(src => {
+    const s = document.createElement("script");
+    s.src = src;
+    document.body.appendChild(s);
+  });
+}
+
+/* Die fruehere iPad-Version hat einen Service Worker installiert, der die
+   Seite aus seinem Cache ausliefert. sw.js ist jetzt ein Abbau-Skript; hier
+   wird zusaetzlich jede noch vorhandene Registrierung entfernt, damit niemand
+   auf einem alten Stand haengen bleibt. */
+if ("serviceWorker" in navigator && navigator.serviceWorker.getRegistrations) {
+  navigator.serviceWorker.getRegistrations()
+    .then(regs => regs.forEach(r => r.unregister()))
+    .catch(() => {});
+}
 
 storageOK = probeStorage();
 loadState();
 LANG = store.settings.lang === "de" ? "de" : "en";
-/* Jeder Neustart faengt auf der Startseite an. Die Firmenauswahl wird
-   mitgespeichert; ohne das Zuruecksetzen landet die naechste Person direkt im
-   Formular der vorherigen Firma – auch nach einem Reload durch iOS. Im
-   Kiosk-Modus "Fest" bleibt der eingestellte Lieferant dagegen stehen, das ist
-   dort ja der Zweck. Der Admin holt sich in openAdmin() wieder einen Lieferanten. */
-if (store.settings.kioskMode === "choose") store.currentSupplierId = null;
-addSnapshot("start");
 applyI18n();
-showScreen("kiosk");
-renderFilters();
-renderKiosk();
-if (!storageOK) setTimeout(() => toast(t("a.storageWarnText")), 900);
 
-/* Offline-Einrichtung. Ein Fehlschlag darf NICHT stillschweigend passieren –
-   sonst haelt man die App fuer offlinefaehig, obwohl sie es nicht ist. */
-if (!("serviceWorker" in navigator) || location.protocol === "file:") {
-  swState = "off";
+if (MODE === "admin") {
+  addSnapshot("start");
+  loadVendorScripts();
+  openAdmin();
+  if (!storageOK) setTimeout(() => toast(t("a.storageWarnText")), 900);
 } else {
-  window.addEventListener("load", () => {
-    navigator.serviceWorker.register("sw.js").then(reg => {
-      const done = () => {
-        swState = navigator.serviceWorker.controller ? "ready" : "pending";
-        renderSwStatus();
-      };
-      if (reg.active) done();
-      navigator.serviceWorker.ready.then(done);
-      setTimeout(done, 1200);
-    }).catch(err => {
-      swState = "error";
-      // Browsermeldung ist "Failed to register ... with script ('URL'): GRUND" –
-      // nur der Grund ist fuer den Anwender brauchbar.
-      const raw = (err && err.message ? err.message : String(err));
-      const m = /\):\s*(.+)$/.exec(raw);
-      swError = (m ? m[1] : raw).trim().slice(0, 160);
-      renderSwStatus();
-    });
-  });
+  showScreen("kiosk");
+  renderKiosk();
+  if (!storageOK) setTimeout(() => toast(t("k.storageWarn")), 900);
 }

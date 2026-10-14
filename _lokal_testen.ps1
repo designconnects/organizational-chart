@@ -1,11 +1,9 @@
-# Kleiner Testserver fuer den Windows-Rechner. Nicht Teil der App - die Datei
-# wird nie auf den Webspace hochgeladen und auch nicht vom Service Worker
-# zwischengespeichert.
+# Kleiner Testserver fuer den Windows-Rechner. Nicht Teil der App.
 #
-# Rechtsklick auf diese Datei -> "Mit PowerShell ausfuehren", dann im Browser
-#   http://localhost:8099/
-# oeffnen. Fuer den Browser gilt localhost als sicherer Kontext, deshalb laesst
-# sich hier auch der Offline-Betrieb (Service Worker) pruefen.
+# Rechtsklick auf diese Datei -> "Mit PowerShell ausfuehren". Der Browser
+# oeffnet sich selbst:
+#   http://localhost:8099/         Lieferanten-Formular
+#   http://localhost:8099/?admin   Admin-Ansicht
 #
 # Beenden: dieses Fenster schliessen oder Strg+C.
 

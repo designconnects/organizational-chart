@@ -5,19 +5,16 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <title>Design Summit 2026 – Org Chart</title>
 
-<link rel="manifest" href="manifest.webmanifest" />
 <meta name="theme-color" content="#000000" />
-<meta name="mobile-web-app-capable" content="yes" />
-<meta name="apple-mobile-web-app-capable" content="yes" />
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-<meta name="apple-mobile-web-app-title" content="Summit Org" />
 <link rel="apple-touch-icon" href="icons/icon-180.png" />
 <link rel="icon" href="icons/icon-192.png" type="image/png" />
 <link rel="stylesheet" href="app.css" />
 </head>
 <body>
 
-<!-- ============================== KIOSK ============================== -->
+<!-- ======================= LIEFERANTEN-ANSICHT =======================
+     Die IDs/Klassen beginnen noch mit "k" (frueher Kiosk-Modus auf dem iPad).
+     Heute ist das die Seite, die Lieferanten ueber den Link oeffnen. -->
 <div class="screen" id="kioskScreen">
   <header class="k-top">
     <svg class="logo" viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="22" fill="#000"/><path d="M24 13v22M13 24h22" stroke="#fff" stroke-width="5" stroke-linecap="round"/></svg>
@@ -30,22 +27,42 @@
         <button type="button" data-lang="en">EN</button>
         <button type="button" data-lang="de">DE</button>
       </div>
-      <button class="iconbtn" id="btnLock" title="Admin" aria-label="Admin">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="11" width="17" height="10.5" rx="2.5"/><path d="M7.5 11V7.5a4.5 4.5 0 0 1 9 0V11"/></svg>
-      </button>
     </div>
   </header>
 
+  <!-- Fortschritt: immer sichtbar, solange eine Firma angelegt ist -->
+  <div class="k-steps hidden" id="kSteps">
+    <div class="k-step" id="kStep1">
+      <span class="num">1</span>
+      <div class="st"><b data-i18n="k.step1">Add your team</b><span id="kStepCount"></span></div>
+    </div>
+    <span class="k-arrow" aria-hidden="true">→</span>
+    <div class="k-step" id="kStep2">
+      <span class="num">2</span>
+      <div class="st"><b data-i18n="k.step2">Send us your file</b><span id="kSendState"></span></div>
+    </div>
+    <button class="btn btn-coral btn-lg" id="kSend" data-i18n="k.sendB">Download file</button>
+  </div>
+
   <div class="scrollarea k-body" id="kioskBody">
 
-    <!-- Schritt 1: Firma waehlen -->
+    <!-- Startseite: Firma eingeben -->
     <section id="kPick" class="k-hero hidden">
       <div class="kick" data-i18n="k.kick">Design Summit 2026</div>
-      <h2 data-i18n="k.welcome">Welcome — please add yourself to the chart</h2>
-      <p data-i18n="k.pickCompany">Start by typing your company name.</p>
+      <h2 data-i18n="k.welcome">Tell us who is on your design team</h2>
+      <p data-i18n="k.intro">It takes about five minutes. Nothing is sent automatically — at the end you download one file and email it to us.</p>
+      <ol class="how">
+        <li><span class="num">1</span><span data-i18n="k.how1">Enter your company name</span></li>
+        <li><span class="num">2</span><span data-i18n="k.how2">Add each person in your team</span></li>
+        <li><span class="num">3</span><span data-i18n="k.how3">Download the file and email it to us</span></li>
+      </ol>
       <div class="pickwrap">
-        <input type="text" id="kCompanyInput" autocomplete="off" autocorrect="off" spellcheck="false" data-i18n-ph="k.searchCompany" placeholder="Your company…" />
-        <div class="sugg" id="kSugg"></div>
+        <label class="flabel" for="kCompanyInput" data-i18n="k.companyLabel">Company name</label>
+        <div class="pickrow">
+          <input type="text" id="kCompanyInput" autocomplete="organization" autocorrect="off" spellcheck="false" data-i18n-ph="k.searchCompany" placeholder="e.g. Ningbo Sunrise Co., Ltd." />
+          <button class="btn btn-blue btn-lg" id="kContinue" data-i18n="k.continue">Start</button>
+        </div>
+        <div class="err" id="kCompanyErr" data-i18n="k.companyErr">Please enter your company name.</div>
       </div>
     </section>
 
@@ -54,7 +71,7 @@
       <section class="card pad">
         <div style="display:flex;flex-wrap:wrap;gap:12px;align-items:flex-start">
           <div style="flex:1 1 auto;min-width:0">
-            <h2 class="card-title" id="kFormTitle" data-i18n="k.formTitle">Your details</h2>
+            <h2 class="card-title" id="kFormTitle" data-i18n="k.formTitle">Add a person</h2>
             <div class="card-sub" data-i18n="k.formSub">Only the name is required — everything else helps us plan better.</div>
           </div>
           <div class="company-chip" id="kCompanyChip">
@@ -66,7 +83,7 @@
       </section>
 
       <aside class="card pad">
-        <h2 class="card-title" data-i18n="k.team">Already on the team</h2>
+        <h2 class="card-title" data-i18n="k.team">Your team</h2>
         <div class="card-sub" id="kTeamCount">—</div>
         <div id="kTeamList"></div>
       </aside>
@@ -77,11 +94,13 @@
     <span class="hint" id="kHint"></span>
     <span class="spacer"></span>
     <button class="btn btn-ghost" id="kReset" data-i18n="k.reset">Clear</button>
-    <button class="btn btn-blue btn-lg" id="kSubmit" data-i18n="k.submit">Add me to the team</button>
+    <button class="btn btn-blue btn-lg" id="kSubmit" data-i18n="k.submit">Add person</button>
   </div>
 </div>
 
-<!-- ============================== ADMIN ============================== -->
+<!-- ============================== ADMIN ==============================
+     Erreichbar ueber ?admin. Keine PIN mehr: Die Daten liegen nur im Browser
+     dessen, der die Seite oeffnet – ein Lieferant sieht hier nur seine eigenen. -->
 <div class="screen hidden" id="adminScreen">
   <header class="a-top">
     <svg style="width:34px;height:34px;flex:0 0 auto" viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="22" fill="#000"/><path d="M24 13v22M13 24h22" stroke="#fff" stroke-width="5" stroke-linecap="round"/></svg>
@@ -91,7 +110,8 @@
         <button type="button" data-lang="en">EN</button>
         <button type="button" data-lang="de">DE</button>
       </div>
-      <button class="btn btn-dark" id="btnHandOver" data-i18n="a.handOver">Hand over iPad</button>
+      <a class="btn btn-ghost" id="btnOpenForm" href="./" target="_blank" rel="noopener" data-i18n="a.openForm">Open supplier form</a>
+      <button class="btn btn-dark" id="btnCopyLink" data-i18n="a.copyLink">Copy supplier link</button>
     </div>
   </header>
 
@@ -103,13 +123,9 @@
         <b id="storageWarnTag"></b>
         <span id="storageWarnText"></span>
       </div>
-      <div class="notice bad hidden" id="swWarn">
-        <b data-i18n="a.swWarnTag">Not offline</b>
-        <span id="swWarnText"></span>
-      </div>
       <div class="notice" id="saveInfo">
         <b data-i18n="a.autosaveTag">Autosave</b>
-        <span><span data-i18n="a.autosaveText">All entries are stored on this iPad automatically.</span> <span id="lastSaved"></span></span>
+        <span><span data-i18n="a.autosaveText">All entries are stored in this browser automatically.</span> <span id="lastSaved"></span></span>
       </div>
 
       <div class="card supplier-bar">
@@ -229,8 +245,8 @@
         <div class="card pad" style="margin-bottom:18px">
           <h2 class="card-title" data-i18n="a.import">Import</h2>
           <div class="setrow">
-            <div class="sl"><b data-i18n="a.impJsonT">JSON file</b><span data-i18n="a.impJsonS">Adds the suppliers from the file to the existing ones.</span></div>
-            <div class="sa"><button class="btn btn-ghost" id="btnImportJson" data-i18n="a.impJsonB">Import JSON</button></div>
+            <div class="sl"><b data-i18n="a.impJsonT">JSON files from suppliers</b><span data-i18n="a.impJsonS">Select several files at once. Suppliers already in the list are merged, people already present are skipped.</span></div>
+            <div class="sa"><button class="btn btn-blue" id="btnImportJson" data-i18n="a.impJsonB">Import JSON files</button></div>
           </div>
           <div class="setrow">
             <div class="sl"><b data-i18n="a.impExcelT">Excel / CSV file</b><span data-i18n="a.impExcelS">Recognises German and English column headers.</span></div>
@@ -247,24 +263,11 @@
         <div class="card pad">
           <h2 class="card-title" data-i18n="a.settings">Settings</h2>
           <div class="setrow">
-            <div class="sl"><b data-i18n="a.kioskT">Company selection in kiosk mode</b><span data-i18n="a.kioskS">“Free” lets each person pick their own company. “Locked” keeps the kiosk on the supplier selected above.</span></div>
-            <div class="sa">
-              <div class="seg" id="segKiosk">
-                <button type="button" data-kiosk="choose" data-i18n="a.kioskFree">Free</button>
-                <button type="button" data-kiosk="locked" data-i18n="a.kioskLocked">Locked</button>
-              </div>
-            </div>
-          </div>
-          <div class="setrow">
-            <div class="sl"><b data-i18n="a.pinT">Admin PIN</b><span data-i18n="a.pinS">Four digits. Protects exports, deletion and the org chart while the iPad is being passed around.</span></div>
-            <div class="sa"><button class="btn btn-ghost" id="btnChangePin" data-i18n="a.pinB">Change PIN</button></div>
-          </div>
-          <div class="setrow">
-            <div class="sl"><b data-i18n="a.wipeT">Delete all data</b><span data-i18n="a.wipeS">Removes every supplier and person from this iPad. Export a backup first.</span></div>
+            <div class="sl"><b data-i18n="a.wipeT">Delete all data</b><span data-i18n="a.wipeS">Removes every supplier and person from this browser. Export a backup first.</span></div>
             <div class="sa"><button class="btn btn-danger" id="btnWipe" data-i18n="a.wipeB">Reset app</button></div>
           </div>
           <div class="setrow">
-            <div class="sl"><b data-i18n="a.aboutT">Offline status</b><span id="swStatus"></span></div>
+            <div class="sl"><b data-i18n="a.aboutT">Version</b></div>
             <div class="sa"><span class="lbl" id="verLabel"></span></div>
           </div>
         </div>
@@ -274,28 +277,26 @@
 </div>
 
 <!-- ============================== OVERLAYS ============================== -->
-<div class="overlay done hidden" id="doneOverlay">
+<!-- Nach dem Download: was jetzt noch zu tun ist. Anhaengen kann der
+     Browser die Datei nicht, das muss der Lieferant selbst erledigen. -->
+<div class="overlay done hidden" id="sendOverlay">
   <div class="sheet">
     <div class="check"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div>
-    <h3 id="doneTitle">Thanks!</h3>
-    <p id="doneText"></p>
-    <div class="acts">
-      <button class="btn btn-ghost btn-lg" id="doneAnother" data-i18n="k.addAnother">Add someone else</button>
-      <button class="btn btn-dark btn-lg" id="doneFinish" data-i18n="k.finish">Done</button>
+    <h3 data-i18n="s.title">Your file is saved</h3>
+    <p id="sendFile"></p>
+    <ol class="send-steps">
+      <li data-i18n="s.step1">Open a new email to the address below.</li>
+      <li data-i18n="s.step2">Attach the file you just saved.</li>
+      <li data-i18n="s.step3">Send it — that’s all.</li>
+    </ol>
+    <div class="send-addr">
+      <span class="lbl" data-i18n="s.to">Send to</span>
+      <b id="sendAddr"></b>
+      <button type="button" class="btn btn-ghost btn-sm" id="sendCopy" data-i18n="s.copy">Copy address</button>
     </div>
-  </div>
-</div>
-
-<div class="overlay hidden" id="pinOverlay">
-  <div class="sheet" style="max-width:400px">
-    <h3 id="pinTitle" data-i18n="a.pinTitle">Enter PIN</h3>
-    <div class="pindots" id="pinDots"><i></i><i></i><i></i><i></i></div>
-    <div class="pinerr" id="pinErr"></div>
-    <div class="pinpad" id="pinPad">
-      <button type="button" data-k="1">1</button><button type="button" data-k="2">2</button><button type="button" data-k="3">3</button>
-      <button type="button" data-k="4">4</button><button type="button" data-k="5">5</button><button type="button" data-k="6">6</button>
-      <button type="button" data-k="7">7</button><button type="button" data-k="8">8</button><button type="button" data-k="9">9</button>
-      <button type="button" data-k="x" aria-label="Cancel">✕</button><button type="button" data-k="0">0</button><button type="button" data-k="b" aria-label="Backspace">⌫</button>
+    <div class="acts">
+      <button type="button" class="btn btn-ghost btn-lg" id="sendBack" data-i18n="s.back">Back to the form</button>
+      <a class="btn btn-blue btn-lg" id="sendMail" href="#" data-i18n="s.mail">Open email</a>
     </div>
   </div>
 </div>
@@ -316,12 +317,12 @@
 
 <div id="toast"></div>
 
-<input type="file" id="fileInput" accept=".json,application/json" />
+<input type="file" id="fileInput" accept=".json,application/json" multiple />
 <input type="file" id="excelInput" accept=".xlsx,.xls,.csv" />
 
-<script src="vendor/xlsx.full.min.js"></script>
-<script src="vendor/html2canvas.min.js"></script>
-<script src="vendor/jspdf.umd.min.js"></script>
+<!-- xlsx, html2canvas und jsPDF (zusammen rund 1,4 MB) braucht nur der
+     Admin-Bereich. app.js laedt sie dort nach, damit das Formular fuer die
+     Lieferanten schnell oeffnet. -->
 <script src="app.js"></script>
 </body>
 </html>
