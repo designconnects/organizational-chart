@@ -1,5 +1,5 @@
 /* ============================================================
-   Design Summit 2026 – Lieferanten-Formular
+   Design Connects – Lieferanten-Formular
    Lieferanten oeffnen den Link, tragen ihr Design-Team ein, laden eine
    JSON-Datei herunter und schicken sie per Mail an SEND_TO.
    Es wird nichts automatisch verschickt; die Eingaben liegen nur im
@@ -10,7 +10,7 @@
    ============================================================ */
 "use strict";
 
-const APP_VERSION = "2.1";
+const APP_VERSION = "2.3";
 const SEND_TO = "designconnects@delta-sport.com";
 
 /* Eigener Schluessel: das Admin-Werkzeug liegt unter derselben Adresse
@@ -33,7 +33,7 @@ const DEFAULT_LANGUAGES  = ["German","English","Mandarin"];
 
 const STR = {
   /* en, de */
-  "app.name":        ["Design Summit 2026", "Design Summit 2026"],
+  "app.name":        ["Design Connects", "Design Connects"],
   "app.tag":         ["Team, skills & responsibilities", "Team, Skills & Verantwortung"],
 
   "btn.cancel":      ["Cancel", "Abbrechen"],
@@ -44,7 +44,7 @@ const STR = {
   "btn.remove":      ["Remove", "Entfernen"],
   "btn.restore":     ["Restore", "Wiederherstellen"],
 
-  "k.kick":          ["Design Summit 2026", "Design Summit 2026"],
+  "k.kick":          ["Design Connects", "Design Connects"],
   "k.welcome":       ["Tell us who is on your design team", "Wer ist in Ihrem Design-Team?"],
   "k.intro":         ["It takes about five minutes. Nothing is sent automatically — at the end you download one file and email it to us.", "Das dauert etwa fünf Minuten. Es wird nichts automatisch verschickt — am Ende laden Sie eine Datei herunter und schicken sie uns per E-Mail."],
   "k.how1":          ["Enter your company name", "Firmennamen eingeben"],
@@ -97,8 +97,10 @@ const STR = {
   "s.copyFail":      ["Please copy the address by hand.", "Bitte die Adresse von Hand kopieren."],
   "s.back":          ["Back to the form", "Zurück zum Formular"],
   "s.mail":          ["Open email", "E-Mail öffnen"],
-  "s.subject":       ["Design Summit 2026 – {company}", "Design Summit 2026 – {company}"],
-  "s.body":          ["Hello,\n\nattached is our design team for the Design Summit 2026.\n\nCompany: {company}\nFile: {file}\n\nBest regards", "Hallo,\n\nanbei unser Design-Team für den Design Summit 2026.\n\nFirma: {company}\nDatei: {file}\n\nViele Grüße"],
+  /* Betreff und Text bewusst ohne Bezug zum Summit: Das Organigramm zeigt das
+     aktuelle Team des Lieferanten, nicht die Teilnehmer der Veranstaltung. */
+  "s.subject":       ["Organizational Chart – {company}", "Organigramm – {company}"],
+  "s.body":          ["Hello,\n\nattached is the current organizational chart of our design team.\n\nCompany: {company}\nFile: {file}\n\nBest regards", "Hallo,\n\nanbei das aktuelle Organigramm unseres Design-Teams.\n\nFirma: {company}\nDatei: {file}\n\nViele Grüße"],
 
   "f.name":          ["Name", "Name"],
   "f.namePh":        ["e.g. Li Wei", "z. B. Li Wei"],
@@ -740,7 +742,7 @@ function renderSteps() {
   $("kSend").disabled = !n;
 }
 
-function supplierFileName(sup) { return "design-summit-2026_" + slug(sup.name) + ".json"; }
+function supplierFileName(sup) { return "Organizational-Chart_" + slug(sup.name) + ".json"; }
 
 /* Nur die tatsaechlich benutzten Werte mitschicken. Sonst landen beim Import
    auch Tippfehler, die der Lieferant gleich wieder abgewaehlt hat, in unseren

@@ -1,4 +1,4 @@
-# Design Summit 2026 – Lieferanten-Formular
+# Design Connects – Lieferanten-Formular
 
 Lieferanten bekommen den Link, tragen ihr Design-Team ein, laden am Ende eine
 Datei herunter und schicken sie per E-Mail an
@@ -51,7 +51,7 @@ Was dabei hilft:
 
 Jede Auswahlzeile hat ein Freitextfeld für eigene Einträge.
 
-Die Datei heißt `design-summit-2026_<firma>.json`. Sie enthält nur die Werte,
+Die Datei heißt `Organizational-Chart_<firma>.json`. Sie enthält nur die Werte,
 die tatsächlich ausgewählt sind.
 
 ---
