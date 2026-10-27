@@ -159,6 +159,8 @@ input::placeholder{color:#b3b3ba;font-weight:600}
 .lead-box.on .cb svg{opacity:1}
 .lead-box .txt{font-size:16px;font-weight:800;color:var(--ink)}
 .help{font-size:13.5px;color:var(--muted);margin-top:10px;line-height:1.45}
+/* Bereichsfeld direkt unter "Team responsible", enger angebunden als ein normales Feld */
+.mform .field.team-area{margin-top:14px}
 
 /* ---------- Formular-Seite (frueher Kiosk) ---------- */
 .k-top{
@@ -286,6 +288,7 @@ a.btn{text-decoration:none}
 .m-controls{display:flex;gap:8px;flex:0 0 auto;flex-wrap:wrap;justify-content:flex-end;max-width:180px}
 .tag{font-size:12.5px;font-weight:800;border-radius:7px;padding:5px 10px;line-height:1.2}
 .tag.lead{background:#000;color:#fff}
+.tag.teamlead{background:#fff;color:#000;box-shadow:inset 0 0 0 2px #000}
 .tag.cad{background:var(--coral);color:#3a1420}
 .tag.twod{background:#fff;color:var(--coral-dark);box-shadow:inset 0 0 0 2px var(--coral)}
 .tag.ai{background:#000;color:#fff}

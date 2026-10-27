@@ -4,7 +4,7 @@ Lieferanten bekommen den Link, tragen ihr Design-Team ein, laden am Ende eine
 Datei herunter und schicken sie per E-Mail an
 **designconnects@delta-sport.com**.
 
-**Link für die Lieferanten:** `https://designconnects.github.io/summit-org/`
+**Link für die Lieferanten:** `https://designconnects.github.io/organizational-chart/`
 
 Ausgewertet werden die Dateien im eigenen Projekt **summit-org-admin**
 (Import, Organigramm, Excel, PDF): `https://designconnects.github.io/summit-org-admin/`
@@ -42,12 +42,13 @@ Was dabei hilft:
 |------|---------|--------|
 | Name | ja | — |
 | E-Mail, Telefon | nein | E-Mail wird auf Plausibilität geprüft |
-| Core Categories / product groups | nein | Die **erste** Angabe bestimmt die Gruppe im Organigramm |
+| Core Categories / product groups | nein | Warengruppen, mit Vorauswahl (DIY & Hardware, Household, Toys …) |
 | Languages | nein | Vorauswahl German, English, Mandarin |
 | 3D Software | nein | Vorauswahl SolidWorks, Rhino 3D, KeyShot |
 | 2D Software | nein | Vorauswahl Adobe Photoshop, Illustrator, InDesign |
 | AI Software | nein | Vorauswahl Vizcom, Claude, ChatGPT, Google Gemini |
-| Team responsible | nein | Wer angehakt ist, steht im Organigramm oben |
+| Responsible for Design Department | nein | Leitung der Design-Abteilung, steht im Organigramm ganz oben |
+| Team responsible | nein | Leitet ein Team in einem Bereich (z. B. Baumarkt). Der Bereich wird frei eingetippt und ist dann Pflicht. Steht im Organigramm in einer eigenen Zeile darunter |
 
 Jede Auswahlzeile hat ein Freitextfeld für eigene Einträge.
 

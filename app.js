@@ -10,7 +10,7 @@
    ============================================================ */
 "use strict";
 
-const APP_VERSION = "2.3";
+const APP_VERSION = "2.5";
 const SEND_TO = "designconnects@delta-sport.com";
 
 /* Eigener Schluessel: das Admin-Werkzeug liegt unter derselben Adresse
@@ -121,12 +121,20 @@ const STR = {
   "f.ai":            ["AI Software", "AI-Software"],
   "f.aiPh":          ["Add more Software…", "Weitere Software…"],
   "f.optional":      ["optional", "optional"],
-  "f.lead":          ["Team responsible", "Teamverantwortlich"],
-  "f.leadHelp":      ["Without this check the person is placed as a member below the team responsible.", "Ohne diesen Haken wird die Person als Mitglied unter dem Teamverantwortlichen eingeordnet."],
+  "f.lead":          ["Responsible for Design Department", "Verantwortlich für die Design-Abteilung"],
+  "f.leadHelp":      ["Leads the whole design department. Shown at the top of the chart.", "Leitet die gesamte Design-Abteilung. Steht im Organigramm ganz oben."],
+  "f.teamLead":      ["Team responsible", "Teamverantwortlich"],
+  "f.teamLeadHelp":  ["Leads a team in one area, e.g. DIY / hardware store. Shown in a row below the design department lead.", "Leitet ein Team in einem Bereich, z. B. Baumarkt. Steht in einer Zeile unter der Leitung der Design-Abteilung."],
+  "f.teamArea":      ["Team / area", "Team / Bereich"],
+  "f.teamAreaPh":    ["e.g. DIY / hardware store", "z. B. Baumarkt"],
+  "f.teamAreaErr":   ["Please enter the team or area.", "Bitte Team oder Bereich eingeben."],
+  "f.memberHelp":    ["Without either tick the person is shown as a team member.", "Ohne Haken erscheint die Person als Teammitglied."],
   "f.addTitle":      ["Add", "Hinzufügen"],
 
 
-  "chart.role":      ["Team responsible", "Teamverantwortlich"],
+  "chart.role":      ["Responsible for Design Department", "Verantwortlich für die Design-Abteilung"],
+  "chart.teamRole":  ["Team responsible · {area}", "Teamverantwortlich · {area}"],
+  "chart.teamRole0": ["Team responsible", "Teamverantwortlich"],
 
 
 
@@ -340,6 +348,9 @@ function normEmp(x) {
     ai: Array.isArray(x.ai) ? x.ai : [],
     languages: langs,
     isLead: !!x.isLead,
+    // Team-Verantwortung mit Bereich (z. B. Baumarkt); aeltere Dateien haben sie nicht
+    isTeamLead: !!x.isTeamLead && !x.isLead,
+    teamArea: x.isTeamLead && !x.isLead ? String(x.teamArea || "") : "",
     id: x.id || uid("emp")
   };
 }
@@ -347,7 +358,8 @@ function cleanEmp(supId) {
   return e => ({
     name: e.name, email: e.email || "", phone: e.phone || "",
     categories: e.categories || [], cad: e.cad || [], twoD: e.twoD || [], ai: e.ai || [],
-    languages: e.languages || [], isLead: !!e.isLead, supplierId: supId, id: e.id
+    languages: e.languages || [], isLead: !!e.isLead,
+    isTeamLead: !!e.isTeamLead, teamArea: e.teamArea || "", supplierId: supId, id: e.id
   });
 }
 function mergePools(cats, cads, twoDs, ais, langs) {
@@ -363,7 +375,8 @@ function mergePools(cats, cads, twoDs, ais, langs) {
    ============================================================ */
 
 function blankDraft() {
-  return { name: "", email: "", phone: "", categories: [], cad: [], twoD: [], ai: [], languages: [], isLead: false };
+  return { name: "", email: "", phone: "", categories: [], cad: [], twoD: [], ai: [], languages: [],
+           isLead: false, isTeamLead: false, teamArea: "" };
 }
 let draft = blankDraft();
 let editingId = null;
@@ -437,16 +450,41 @@ function buildMemberForm() {
     pillGroup("f.ai",    "f.aiPh",    "availableAi",         "ai",         "ai")
   ];
 
-  const lead = el("div", "lead-box");
-  const cb = el("span", "cb");
-  cb.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
-  lead.appendChild(cb);
-  lead.appendChild(el("span", "txt", t("f.lead")));
-  lead.setAttribute("role", "checkbox");
-  lead.onclick = () => { draft.isLead = !draft.isLead; renderFormState(); };
-  wrap.appendChild(lead);
-  wrap.appendChild(el("div", "help", t("f.leadHelp")));
-  FE.lead = lead;
+  /* Zwei Rollen, die sich ausschliessen: Leitung der Design-Abteilung (steht
+     ganz oben) oder Leitung eines Teams in einem Bereich (eigene Zeile darunter). */
+  const roleBox = (labelKey, helpKey, onToggle) => {
+    const box = el("div", "lead-box");
+    const cb = el("span", "cb");
+    cb.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
+    box.appendChild(cb);
+    box.appendChild(el("span", "txt", t(labelKey)));
+    box.setAttribute("role", "checkbox");
+    box.onclick = () => { onToggle(); renderFormState(); };
+    wrap.appendChild(box);
+    wrap.appendChild(el("div", "help", t(helpKey)));
+    return box;
+  };
+  FE.lead = roleBox("f.lead", "f.leadHelp", () => {
+    draft.isLead = !draft.isLead;
+    if (draft.isLead) draft.isTeamLead = false;
+  });
+  FE.teamLead = roleBox("f.teamLead", "f.teamLeadHelp", () => {
+    draft.isTeamLead = !draft.isTeamLead;
+    if (draft.isTeamLead) { draft.isLead = false; setTimeout(() => FE.teamArea.focus(), 60); }
+  });
+
+  // Bereich des Teams, nur sichtbar bei "Team responsible"
+  const areaF = el("div", "field team-area");
+  const areaLab = el("label", "flabel", t("f.teamArea"));
+  FE.teamArea = document.createElement("input");
+  FE.teamArea.type = "text"; FE.teamArea.placeholder = t("f.teamAreaPh"); FE.teamArea.autocomplete = "off";
+  areaLab.htmlFor = FE.teamArea.id = "fld_teamArea";
+  FE.teamAreaErr = el("div", "err", t("f.teamAreaErr"));
+  areaF.appendChild(areaLab); areaF.appendChild(FE.teamArea); areaF.appendChild(FE.teamAreaErr);
+  wrap.appendChild(areaF);
+  FE.teamAreaField = areaF;
+  FE.teamArea.oninput = e => { draft.teamArea = e.target.value; FE.teamAreaErr.classList.remove("show"); };
+  wrap.appendChild(el("div", "help", t("f.memberHelp")));
 
   FE.name.oninput  = e => { draft.name = e.target.value; if (draft.name.trim()) FE.nameErr.classList.remove("show"); };
   FE.email.oninput = e => { draft.email = e.target.value; FE.emailErr.classList.remove("show"); };
@@ -484,6 +522,10 @@ function renderFormState() {
   });
   FE.lead.classList.toggle("on", !!draft.isLead);
   FE.lead.setAttribute("aria-checked", draft.isLead ? "true" : "false");
+  FE.teamLead.classList.toggle("on", !!draft.isTeamLead);
+  FE.teamLead.setAttribute("aria-checked", draft.isTeamLead ? "true" : "false");
+  FE.teamAreaField.classList.toggle("hidden", !draft.isTeamLead);
+  FE.teamArea.value = draft.teamArea || "";
   syncFormLabels();
 }
 
@@ -511,6 +553,14 @@ function validateDraft() {
     FE.email.scrollIntoView({ block: "center", behavior: "smooth" });
     return false;
   }
+  // Ohne Bereich ist "Team responsible" im Organigramm nicht zuzuordnen
+  draft.teamArea = (FE.teamArea.value || "").trim();
+  if (draft.isTeamLead && !draft.teamArea) {
+    FE.teamAreaErr.classList.add("show");
+    FE.teamArea.focus();
+    FE.teamArea.scrollIntoView({ block: "center", behavior: "smooth" });
+    return false;
+  }
   return true;
 }
 
@@ -521,14 +571,16 @@ function commitDraft(sup) {
     Object.assign(existing, {
       name: draft.name, email: draft.email, phone: draft.phone,
       categories: [...draft.categories], cad: [...draft.cad], twoD: [...draft.twoD],
-      ai: [...draft.ai], languages: [...draft.languages], isLead: draft.isLead
+      ai: [...draft.ai], languages: [...draft.languages], isLead: draft.isLead,
+      isTeamLead: draft.isTeamLead, teamArea: draft.isTeamLead ? draft.teamArea.trim() : ""
     });
     return { emp: existing, isNew: false };
   }
   const emp = {
     name: draft.name, email: draft.email, phone: draft.phone,
     categories: [...draft.categories], cad: [...draft.cad], twoD: [...draft.twoD],
-    ai: [...draft.ai], languages: [...draft.languages], isLead: draft.isLead, id: uid("emp")
+    ai: [...draft.ai], languages: [...draft.languages], isLead: draft.isLead,
+      isTeamLead: draft.isTeamLead, teamArea: draft.isTeamLead ? draft.teamArea.trim() : "", id: uid("emp")
   };
   sup.employees.push(emp);
   return { emp, isNew: true };
@@ -614,6 +666,11 @@ function renderKioskTeam() {
   host.appendChild(list);
 }
 
+function teamRoleText(emp) {
+  const area = (emp.teamArea || "").trim();
+  return area ? t("chart.teamRole", { area }) : t("chart.teamRole0");
+}
+
 /* Alle Eintraege gehoeren dem Lieferanten selbst, also alle bearbeitbar */
 function memberCard(emp) {
   const row = el("div", "member" + (emp.isLead ? " is-lead" : ""));
@@ -623,6 +680,7 @@ function memberCard(emp) {
   if (emp.phone) main.appendChild(el("div", "m-meta", emp.phone));
   const tags = el("div", "m-tags");
   if (emp.isLead) tags.appendChild(el("span", "tag lead", t("chart.role")));
+  if (emp.isTeamLead) tags.appendChild(el("span", "tag teamlead", teamRoleText(emp)));
   (emp.languages || []).forEach(v => tags.appendChild(el("span", "tag lang", v)));
   (emp.categories || []).forEach(v => tags.appendChild(el("span", "tag cat", v)));
   (emp.cad || []).forEach(v => tags.appendChild(el("span", "tag cad", v)));
@@ -693,7 +751,8 @@ function startEdit(id) {
   draft = {
     name: e.name || "", email: e.email || "", phone: e.phone || "",
     categories: [...(e.categories || [])], cad: [...(e.cad || [])], twoD: [...(e.twoD || [])],
-    ai: [...(e.ai || [])], languages: [...(e.languages || [])], isLead: !!e.isLead
+    ai: [...(e.ai || [])], languages: [...(e.languages || [])], isLead: !!e.isLead,
+    isTeamLead: !!e.isTeamLead, teamArea: e.teamArea || ""
   };
   renderKiosk();
   $("kioskBody").scrollTop = 0;
