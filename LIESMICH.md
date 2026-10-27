@@ -88,3 +88,12 @@ Rechtsklick auf `_lokal_testen.ps1` → „Mit PowerShell ausführen". Der Brows
 
 Eingaben beim Testen liegen nur in deinem Browser und berühren den Bestand im
 Admin-Projekt nicht (eigener Speicher-Schlüssel).
+
+---
+
+## Kategorien
+
+Zur Auswahl stehen nur englische Begriffe. Deutsche Namen (z. B. „Spielzeug",
+„Garten & Freizeit") werden nicht mehr angeboten, auch nicht, wenn sie in einem
+älteren Browser-Stand noch vorkommen. Die Liste steht in `app.js` ganz oben
+bei `HIDDEN_CATEGORIES`.

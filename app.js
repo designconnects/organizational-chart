@@ -10,7 +10,7 @@
    ============================================================ */
 "use strict";
 
-const APP_VERSION = "2.5";
+const APP_VERSION = "2.6";
 const SEND_TO = "designconnects@delta-sport.com";
 
 /* Eigener Schluessel: das Admin-Werkzeug liegt unter derselben Adresse
@@ -26,6 +26,17 @@ const DEFAULT_CAD        = ["SolidWorks","Rhino 3D","KeyShot"];
 const DEFAULT_2D         = ["Adobe Photoshop","Adobe Illustrator","Adobe InDesign"];
 const DEFAULT_AI         = ["Vizcom","Claude","ChatGPT","Google Gemini"];
 const DEFAULT_LANGUAGES  = ["German","English","Mandarin"];
+
+/* Deutsche Kategorienamen, z. B. aus aelteren Excel-Dateien. Sie werden nicht
+   mehr zur Auswahl angeboten – die Liste soll nur englische Begriffe enthalten.
+   Personen, die sie bereits tragen, behalten sie (Karte, Organigramm, Excel). */
+const HIDDEN_CATEGORIES = ["Fahrzeugzubehör", "Fitness & Sport", "Garten & Freizeit", "Werkzeug & Heimwerken",
+  "Haushalt & Küche", "Camping & Outdoor", "Spielzeug", "Spielwaren", "Haushalt", "Küche", "Möbel",
+  "Tierbedarf", "Schreibwaren", "Taschen & Koffer", "Dekoration", "Heimwerken", "Baumarkt"];
+function isHiddenCategory(c) {
+  const k = String(c || "").trim().toLowerCase();
+  return HIDDEN_CATEGORIES.some(h => h.toLowerCase() === k);
+}
 
 /* ============================================================
    1. Sprachen
@@ -210,6 +221,7 @@ function loadState() {
     // laesst den Default stehen, ein explizit leeres Array im Altstand aber nicht –
     // deshalb hier noch einmal absichern.
     if (!Array.isArray(store.availableAi) || !store.availableAi.length) store.availableAi = [...DEFAULT_AI];
+    store.availableCategories = (store.availableCategories || []).filter(c => !isHiddenCategory(c));
     store.suppliers = d.suppliers.map(s => ({
       id: s.id || uid("sup"),
       name: s.name || "",
@@ -363,7 +375,7 @@ function cleanEmp(supId) {
   });
 }
 function mergePools(cats, cads, twoDs, ais, langs) {
-  (cats || []).forEach(c => { if (c && !store.availableCategories.includes(c)) store.availableCategories.push(c); });
+  (cats || []).forEach(c => { if (c && !isHiddenCategory(c) && !store.availableCategories.includes(c)) store.availableCategories.push(c); });
   (cads || []).forEach(c => { if (c && !store.availableCad.includes(c)) store.availableCad.push(c); });
   (twoDs || []).forEach(c => { if (c && !store.available2d.includes(c)) store.available2d.push(c); });
   (ais || []).forEach(c => { if (c && !store.availableAi.includes(c)) store.availableAi.push(c); });
@@ -429,7 +441,8 @@ function buildMemberForm() {
     const commit = () => {
       const v = inp.value.trim();
       if (!v) return;
-      if (!store[poolKey].includes(v)) store[poolKey].push(v);
+      const hidden = poolKey === "availableCategories" && isHiddenCategory(v);
+      if (!hidden && !store[poolKey].includes(v)) store[poolKey].push(v);
       if (!draft[draftKey].includes(v)) draft[draftKey].push(v);
       inp.value = "";
       renderFormState(); saveState();
